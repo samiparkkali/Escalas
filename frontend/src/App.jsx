@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Typography, Box, Tabs, Tab } from '@mui/material';
+
 import ProfessionalsTab from './components/ProfessionalsTab';
 import UnavailabilitiesTab from './components/UnavailabilitiesTab';
 import ScheduleConfigTab from './components/ScheduleConfigTab';
@@ -7,80 +7,112 @@ import ScheduleViewTab from './components/ScheduleViewTab';
 import StatisticsTab from './components/StatisticsTab';
 
 function App() {
+  const today = new Date();
+  const startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+
   const [activeTab, setActiveTab] = useState(0);
   const [professionals, setProfessionals] = useState([]);
   const [unavailabilities, setUnavailabilities] = useState([]);
+
   const [scheduleConfig, setScheduleConfig] = useState({
-    startDate: new Date(), // first day of next month
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // last day of next month 
-    morningWeekday: 1,
-    nightWeekday: 1,
-    morningWeekend: 1,
-    nightWeekend: 1,
+    startDate,
+    endDate,
+    morningWeekdaySpecialist: 1,
+    nightWeekdaySpecialist: 1,
+    morningWeekendSpecialist: 1,
+    nightWeekendSpecialist: 1,
+    morningWeekdayIntern: 1,
+    nightWeekdayIntern: 1,
+    morningWeekendIntern: 1,
+    nightWeekendIntern: 1,
   });
+
   const [schedule, setSchedule] = useState(null);
   const [statistics, setStatistics] = useState([]);
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom align="center">
-          HBA - Shift Scheduler
-        </Typography>
-        
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="shift scheduler tabs">
-            <Tab label="Medical Professionals" />
-            <Tab label="Unavailabilities" />
-            <Tab label="Schedule Config" />
-            <Tab label="Generate Schedule" />
-            <Tab label="Statistics" />
-          </Tabs>
-        </Box>
+    <div className="app-container">
+      <header style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <h1>HBA – Shift Scheduler</h1>
+      </header>
 
-        <Box sx={{ mt: 3 }}>
-          {activeTab === 0 && (
-            <ProfessionalsTab 
-              professionals={professionals} 
-              setProfessionals={setProfessionals} 
-            />
-          )}
-          {activeTab === 1 && (
-            <UnavailabilitiesTab 
-              professionals={professionals}
-              unavailabilities={unavailabilities}
-              setUnavailabilities={setUnavailabilities}
-            />
-          )}
-          {activeTab === 2 && (
-            <ScheduleConfigTab 
-              config={scheduleConfig}
-              setConfig={setScheduleConfig}
-            />
-          )}
-          {activeTab === 3 && (
-            <ScheduleViewTab 
-              professionals={professionals}
-              unavailabilities={unavailabilities}
-              config={scheduleConfig}
-              schedule={schedule}
-              setSchedule={setSchedule}
-              setStatistics={setStatistics}
-            />
-          )}
-          {activeTab === 4 && (
-            <StatisticsTab 
-              statistics={statistics}
-              setStatistics={setStatistics}
-            />
-          )}
-        </Box>
-      </Box>
-    </Container>
+      {/* Tabs */}
+      <div className="tabs">
+        <button
+          className={activeTab === 0 ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab(0)}
+        >
+          Medical Professionals
+        </button>
+        <button
+          className={activeTab === 1 ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab(1)}
+        >
+          Unavailabilities
+        </button>
+        <button
+          className={activeTab === 2 ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab(2)}
+        >
+          Schedule Config
+        </button>
+        <button
+          className={activeTab === 3 ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab(3)}
+        >
+          Generate Schedule
+        </button>
+        <button
+          className={activeTab === 4 ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab(4)}
+        >
+          Statistics
+        </button>
+      </div>
+
+      {/* Tab content */}
+      <div style={{ marginTop: '24px' }}>
+        {activeTab === 0 && (
+          <ProfessionalsTab
+            professionals={professionals}
+            setProfessionals={setProfessionals}
+          />
+        )}
+
+        {activeTab === 1 && (
+          <UnavailabilitiesTab
+            professionals={professionals}
+            unavailabilities={unavailabilities}
+            setUnavailabilities={setUnavailabilities}
+          />
+        )}
+
+        {activeTab === 2 && (
+          <ScheduleConfigTab
+            config={scheduleConfig}
+            setConfig={setScheduleConfig}
+          />
+        )}
+
+        {activeTab === 3 && (
+          <ScheduleViewTab
+            professionals={professionals}
+            config={scheduleConfig}
+            schedule={schedule}
+            setSchedule={setSchedule}
+            setStatistics={setStatistics}
+          />
+        )}
+
+        {activeTab === 4 && (
+          <StatisticsTab
+            statistics={statistics}
+            setStatistics={setStatistics}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 

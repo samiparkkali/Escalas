@@ -32,7 +32,7 @@ async def get_professionals():
 
 @app.post("/api/professionals", response_model=ProfessionalModel)
 async def create_professional(request: CreateProfessionalRequest):
-    return deps.professional_repository.create(request.name)
+    return deps.professional_repository.create(request.name, request.role)
 
 @app.put("/api/professionals/{professional_id}", response_model=ProfessionalModel)
 async def update_professional(professional_id: str, request: CreateProfessionalRequest):

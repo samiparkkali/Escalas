@@ -1,0 +1,109 @@
+@import './variables.css';
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 16px;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-blue-dark);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-green);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 16px;
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-green-dark);
+  transform: translateY(-2px);
+}
+
+/* Tabs and Panels */
+.tab-panel {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-top: 20px;
+}
+
+.tab-header {
+  border-bottom: 2px solid var(--primary-blue-light);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+/* Tables */
+.table-container {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.table th {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--background-dark);
+}
+
+.table td {
+  padding: 12px;
+  border: 1px solid var(--background-dark);
+}
+
+.table tr:nth-child(even) {
+  background-color: var(--background-light);
+}
+
+.table tr:hover {
+  background-color: var(--primary-blue-light);
+  color: white;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid var(--primary-blue-light);
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  transition: var(--transition);
+}
+
+.form-input:focus {
+  border-color: var(--primary-blue);
+  outline: none;
+  box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-primary);
+  font-weight: 500;
+}

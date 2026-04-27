@@ -1,59 +1,41 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
 import axios from 'axios';
+import { formatDisplayDate } from '../utils/dateUtils';
 
-const ScheduleViewTab = ({ 
-  professionals, 
-  unavailabilities, 
-  config, 
-  schedule, 
-  setSchedule, 
-  setStatistics 
-}) => {
+const ScheduleViewTab = ({ config, schedule, setSchedule, setStatistics }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleGenerateSchedule = async () => {
-    if (professionals.length === 0) {
-      setError('Please add professionals first');
-      return;
-    }
-
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
       const response = await axios.post('/api/schedule/generate', {
-        professionals,
-        unavailabilities,
         config: {
-          startDate: config.startDate.toISOString(),
-          endDate: config.endDate.toISOString(),
-          morningWeekday: config.morningWeekday,
-          nightWeekday: config.nightWeekday,
-          morningWeekend: config.morningWeekend,
-          nightWeekend: config.nightWeekend,
+          start_date: config.startDate.toISOString().slice(0, 10),
+          end_date: config.endDate.toISOString().slice(0, 10),
+          morning_weekday_specialist: config.morningWeekdaySpecialist,
+          night_weekday_specialist: config.nightWeekdaySpecialist,
+          morning_weekend_specialist: config.morningWeekendSpecialist,
+          night_weekend_specialist: config.nightWeekendSpecialist,
+          morning_weekday_intern: config.morningWeekdayIntern,
+          night_weekday_intern: config.nightWeekdayIntern,
+          morning_weekend_intern: config.morningWeekendIntern,
+          night_weekend_intern: config.nightWeekendIntern,
         },
       });
 
-      setSchedule(response.data.schedule);
-      setStatistics(response.data.statistics);
+      setSchedule(response.data);
+
+      const statsResponse = await axios.get('/api/schedule/statistics');
+      setStatistics(statsResponse.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate schedule');
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          'Failed to generate schedule'
+      );
     } finally {
       setLoading(false);
     }
@@ -64,124 +46,107 @@ const ScheduleViewTab = ({
       const response = await axios.get('/api/schedule/export', {
         responseType: 'blob',
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'schedule.csv');
+      link.download = 'schedule.csv';
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
+    } catch {
       setError('Failed to download CSV');
     }
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        Generate Schedule
-      </Typography>
-      
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          onClick={handleGenerateSchedule}
-          disabled={loading}
-          sx={{ mr: 2 }}
-        >
-          {loading ? <CircularProgress size={20} /> : 'Generate Schedule'}
-        </Button>
-        
-        {schedule && (
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={handleDownloadCSV}
-          >
-            Download CSV
-          </Button>
-        )}
-      </Box>
+    <div className="tab-panel">
+      <div className="tab-header">
+        <h2>Generate Schedule</h2>
+      </div>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
+      <button
+        className="btn-primary"
+        onClick={handleGenerateSchedule}
+        disabled={loading}
+      >
+        {loading ? 'Generating…' : 'Generate Schedule'}
+      </button>
+
+      {schedule && (
+        <button
+          className="btn-secondary"
+          style={{ marginLeft: '12px' }}
+          onClick={handleDownloadCSV}
+        >
+          Download CSV
+        </button>
       )}
+
+      {error && <div className="alert error" style={{ marginTop: '16px' }}>{error}</div>}
 
       {schedule && (
         <>
-          <Typography variant="h6" gutterBottom>
-            Schedule Results
-          </Typography>
-          
-          {schedule.message && (
-            <Alert severity={schedule.success ? "success" : "warning"} sx={{ mb: 2 }}>
-              {schedule.message}
-            </Alert>
-          )}
-
-          <Typography variant="subtitle1" gutterBottom>
+          <h3 style={{ marginTop: '24px' }}>
             Assignments ({schedule.assignments?.length || 0})
-          </Typography>
-          
-          <TableContainer component={Paper} sx={{ mb: 3 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Professional</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Shift Type</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {schedule.assignments?.map((assignment, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{assignment.professionalName}</TableCell>
-                    <TableCell>{assignment.shiftDate}</TableCell>
-                    <TableCell>{assignment.shiftType}</TableCell>
-                  </TableRow>
-                )) || (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center">No assignments</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          </h3>
 
-          {schedule.unassignedShifts && schedule.unassignedShifts.length > 0 && (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Professional</th>
+                  <th>Role</th>
+                  <th>Date</th>
+                  <th>Shift</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedule.assignments?.map((a, i) => (
+                  <tr key={i}>
+                    <td>{a.professional_name}</td>
+                    <td>{a.professional_role}</td>
+                    <td>{formatDisplayDate(a.shift_date)}</td>
+                    <td>{a.shift_type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {schedule.unassigned_shifts?.length > 0 && (
             <>
-              <Typography variant="subtitle1" gutterBottom>
-                Unassigned Shifts ({schedule.unassignedShifts.length})
-              </Typography>
-              
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Shift Type</TableCell>
-                      <TableCell>Required Staff</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {schedule.unassignedShifts.map((shift, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{shift.date}</TableCell>
-                        <TableCell>{shift.shiftType}</TableCell>
-                        <TableCell>{shift.requiredStaff}</TableCell>
-                      </TableRow>
+              <h3 style={{ marginTop: '24px' }}>
+                Unassigned Shifts ({schedule.unassigned_shifts.length})
+              </h3>
+
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Shift</th>
+                      <th>Missing Specialists</th>
+                      <th>Missing Interns</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedule.unassigned_shifts.map((s, i) => (
+                      <tr key={i}>
+                        <td>{s.date}</td>
+                        <td>{s.shift_type}</td>
+                        <td>{s.required_specialists}</td>
+                        <td>{s.required_interns}</td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </>
       )}
-    </Paper>
+    </div>
   );
 };
 

@@ -1,49 +1,76 @@
-from pydantic import BaseModel
+from enum import Enum
+from datetime import date
 from typing import List
+from pydantic import BaseModel
 
-# API Models (DTOs)
+
+class Role(str, Enum):
+    specialist = "specialist"
+    intern = "intern"
+
+
+class ShiftType(str, Enum):
+    morning = "morning"
+    night = "night"
+
+
 class ProfessionalModel(BaseModel):
     id: str
     name: str
+    role: Role
     is_active: bool = True
+
 
 class CreateProfessionalRequest(BaseModel):
     name: str
+    role: Role
+
 
 class UnavailabilityModel(BaseModel):
     id: str
     professional_id: str
-    date: str
-    shift_type: str
-    professional_name: str
+    date: date
+    shift_type: ShiftType
+
 
 class CreateUnavailabilityRequest(BaseModel):
     professional_id: str
-    date: str
-    shift_type: str
+    date: date
+    shift_type: ShiftType
+
 
 class ScheduleConfigModel(BaseModel):
-    start_date: str
-    end_date: str
-    morning_weekday: int
-    night_weekday: int
-    morning_weekend: int
-    night_weekend: int
+    start_date: date
+    end_date: date
+
+    morning_weekday_specialist: int
+    night_weekday_specialist: int
+    morning_weekend_specialist: int
+    night_weekend_specialist: int
+
+    morning_weekday_intern: int
+    night_weekday_intern: int
+    morning_weekend_intern: int
+    night_weekend_intern: int
+
 
 class GenerateScheduleRequest(BaseModel):
-    professionals: List[ProfessionalModel]
-    unavailabilities: List[UnavailabilityModel]
     config: ScheduleConfigModel
+
 
 class AssignmentResponse(BaseModel):
     professional_name: str
-    shift_date: str
-    shift_type: str
+    professional_role: Role
+    shift_date: date
+    shift_type: ShiftType
+
 
 class UnassignedShiftResponse(BaseModel):
-    date: str
-    shift_type: str
-    required_staff: int
+    date: date
+    shift_type: ShiftType
+    required_specialists: int
+    required_interns: int
+
 
 class ScheduleResponse(BaseModel):
     assignments: List[AssignmentResponse]
@@ -51,8 +78,10 @@ class ScheduleResponse(BaseModel):
     success: bool
     message: str
 
+
 class StatisticsResponse(BaseModel):
     name: str
+    role: Role
     morning: int
     night: int
     total: int

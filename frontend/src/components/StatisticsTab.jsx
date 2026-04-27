@@ -1,23 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Alert,
-} from '@mui/material';
 import axios from 'axios';
 
 const StatisticsTab = ({ statistics, setStatistics }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Load statistics when component mounts or when statistics prop changes
   useEffect(() => {
     loadStatistics();
   }, []);
@@ -37,46 +24,44 @@ const StatisticsTab = ({ statistics, setStatistics }) => {
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        Schedule Statistics
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      
+    <div className="tab-panel">
+      <div className="tab-header">
+        <h2>Schedule Statistics</h2>
+      </div>
+
+      {error && <div className="alert error">{error}</div>}
+
       {statistics && statistics.length > 0 ? (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Professional</TableCell>
-                <TableCell align="right">Morning Shifts</TableCell>
-                <TableCell align="right">Night Shifts</TableCell>
-                <TableCell align="right">Total Shifts</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Professional</th>
+                <th>Morning Shifts</th>
+                <th>Night Shifts</th>
+                <th>Total Shifts</th>
+              </tr>
+            </thead>
+            <tbody>
               {statistics.map((stat, index) => (
-                <TableRow key={index}>
-                  <TableCell>{stat.name}</TableCell>
-                  <TableCell align="right">{stat.morning}</TableCell>
-                  <TableCell align="right">{stat.night}</TableCell>
-                  <TableCell align="right">{stat.total}</TableCell>
-                </TableRow>
+                <tr key={index}>
+                  <td>{stat.name}</td>
+                  <td>{stat.morning}</td>
+                  <td>{stat.night}</td>
+                  <td>{stat.total}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <Typography variant="body1" color="text.secondary">
-          {loading ? 'Loading statistics...' : 'No statistics available. Generate a schedule first.'}
-        </Typography>
+        <p style={{ color: '#666', marginTop: '12px' }}>
+          {loading
+            ? 'Loading statistics...'
+            : 'No statistics available. Generate a schedule first.'}
+        </p>
       )}
-    </Paper>
+    </div>
   );
 };
 
