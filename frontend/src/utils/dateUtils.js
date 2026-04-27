@@ -1,11 +1,18 @@
-import { format } from 'date-fns';
+// Input: "yyyy-mm-dd"
+// Output: "dd-mm-yyyy"
+export const formatDisplayDate = (isoDate) => {
+  if (!isoDate) return '';
 
-export const formatDisplayDate = (value) => {
-  if (!value) return '';
-  return format(new Date(value), 'dd-MM-yyyy');
+  const [year, month, day] = isoDate.split('-');
+  return `${day}-${month}-${year}`;
 };
 
-export const toIsoDate = (value) => {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
+// Input: "yyyy-mm-dd" | Date | undefined
+// Output: "yyyy-mm-dd"
+export const toIsoDate = (date) => {
+  if (!date) return null;
+
+  if (typeof date === 'string') return date;
+
+  return date.toISOString().split('T')[0];
 };

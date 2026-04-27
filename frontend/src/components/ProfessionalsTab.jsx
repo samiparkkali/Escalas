@@ -15,18 +15,19 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
     try {
       setLoading(true);
       const response = await axios.get('/api/professionals');
+
       setProfessionals(
-        response.data.map((p) => ({
+        response.data.map(p => ({
           id: p.id,
           name: p.name,
           role: p.role,
           isActive: p.is_active,
         }))
       );
+
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to load professionals');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -37,13 +38,14 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
 
     try {
       setLoading(true);
+
       const response = await axios.post('/api/professionals', {
         name: newProfessionalName.trim(),
         role: newProfessionalRole,
       });
 
-      setProfessionals([
-        ...professionals,
+      setProfessionals(prev => [
+        ...prev,
         {
           id: response.data.id,
           name: response.data.name,
@@ -55,9 +57,8 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
       setNewProfessionalName('');
       setNewProfessionalRole('specialist');
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to add professional');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -67,93 +68,78 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
     try {
       setLoading(true);
       await axios.delete(`/api/professionals/${id}`);
-      setProfessionals(professionals.filter((p) => p.id !== id));
-    } catch (err) {
+
+      // ✅ ALWAYS use latest state
+      setProfessionals(prev =>
+        prev.filter(p => p.id !== id)
+      );
+    } catch {
       setError('Failed to remove professional');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="tab-panel">
-      <div className="tab-header">
-        <h2>Manage Professionals</h2>
-      </div>
+    <>
+      <h3>Manage Professionals</h3>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && <p>{error}</p>}
 
-      <div className="form-group">
-        <label className="form-label">Professional Name</label>
-        <input
-          className="form-input"
-          value={newProfessionalName}
-          onChange={(e) => setNewProfessionalName(e.target.value)}
-          disabled={loading}
-        />
-      </div>
+      <input
+        placeholder="Professional Name"
+        value={newProfessionalName}
+        onChange={(e) => setNewProfessionalName(e.target.value)}
+        disabled={loading}
+      />
 
-      <div className="form-group">
-        <label className="form-label">Role</label>
-        <select
-          className="form-input"
-          value={newProfessionalRole}
-          onChange={(e) => setNewProfessionalRole(e.target.value)}
-          disabled={loading}
-        >
-          <option value="specialist">Specialist</option>
-          <option value="intern">Intern</option>
-        </select>
-      </div>
-
-      <button
-        className="btn-primary"
-        onClick={handleAddProfessional}
+      <select
+        value={newProfessionalRole}
+        onChange={(e) => setNewProfessionalRole(e.target.value)}
         disabled={loading}
       >
+        <option value="specialist">Specialist</option>
+        <option value="intern">Intern</option>
+      </select>
+
+      <button onClick={handleAddProfessional} disabled={loading}>
         Add
       </button>
 
-      <h3 style={{ marginTop: '24px' }}>
-        Current Professionals ({professionals.length})
-      </h3>
+      <h4>Current Professionals ({professionals.length})</h4>
 
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Actions</th>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {professionals.map(p => (
+            <tr key={p.id}>
+              <td>{p.name}</td>
+              <td>{p.role}</td>
+              <td>
+                <button
+                  onClick={() => handleRemoveProfessional(p.id)}
+                  disabled={loading}
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {professionals.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.role}</td>
-                <td>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => handleRemoveProfessional(p.id)}
-                    disabled={loading}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+          ))}
 
-            {professionals.length === 0 && !loading && (
-              <tr>
-                <td colSpan="3">No professionals added yet</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          {professionals.length === 0 && !loading && (
+            <tr>
+              <td colSpan="3">No professionals added yet</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
   );
 };
 

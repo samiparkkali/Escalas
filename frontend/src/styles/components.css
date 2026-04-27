@@ -1,18 +1,110 @@
 @import './variables.css';
 
-/* Buttons */
+/* ========== TABS ========== */
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  background: white;
+  color: var(--primary-blue);
+  border: 2px solid var(--primary-blue);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tab-button:hover {
+  background-color: var(--primary-blue-light);
+}
+
+.tab-button.active {
+  background-color: var(--primary-blue);
+  color: white;
+}
+
+/* ========== PANEL ========== */
+
+.tab-panel {
+  background-color: white;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+
+.tab-header {
+  border-bottom: 2px solid var(--primary-blue-light);
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+}
+
+/* ========== ALERTS ========== */
+
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--border-radius);
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+.alert.error {
+  background-color: #fdecea;
+  color: #b42318;
+  border: 1px solid #f5c2c0;
+}
+
+/* ========== FORMS ========== */
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--border-radius);
+  border: 1.5px solid var(--primary-blue-light);
+  font-size: 16px;
+  transition: var(--transition);
+}
+
+.form-input:hover {
+  border-color: var(--primary-blue);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 220, 0.15);
+}
+
+/* ========== BUTTONS ========== */
+
 .btn-primary {
+  margin-top: 8px;
   background-color: var(--primary-blue);
   color: white;
   border: none;
   padding: 10px 20px;
   border-radius: var(--border-radius);
+  font-size: 16px;
   cursor: pointer;
   transition: var(--transition);
-  font-size: 16px;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--primary-blue-dark);
   transform: translateY(-2px);
 }
@@ -21,34 +113,18 @@
   background-color: var(--secondary-green);
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 6px 14px;
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 16px;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: var(--secondary-green-dark);
-  transform: translateY(-2px);
 }
 
-/* Tabs and Panels */
-.tab-panel {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  margin-top: 20px;
-}
+/* ========== TABLES ========== */
 
-.tab-header {
-  border-bottom: 2px solid var(--primary-blue-light);
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-}
-
-/* Tables */
 .table-container {
   overflow-x: auto;
 }
@@ -60,11 +136,10 @@
 }
 
 .table th {
-  background-color: var(--primary-blue);
+  background-color: var(--primary-blue-dark);
   color: white;
   padding: 12px;
   text-align: left;
-  border: 1px solid var(--background-dark);
 }
 
 .table td {
@@ -76,34 +151,22 @@
   background-color: var(--background-light);
 }
 
-.table tr:hover {
-  background-color: var(--primary-blue-light);
-  color: white;
+.table td[colspan] {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
-/* Forms */
-.form-group {
-  margin-bottom: 15px;
-}
+/* ========== RESPONSIVE ========== */
 
-.form-input {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid var(--primary-blue-light);
-  border-radius: var(--border-radius);
-  font-size: 16px;
-  transition: var(--transition);
-}
+@media (max-width: 768px) {
+  .tab-panel {
+    padding: 18px;
+  }
 
-.form-input:focus {
-  border-color: var(--primary-blue);
-  outline: none;
-  box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--text-primary);
-  font-weight: 500;
+  .table th,
+  .table td {
+    font-size: 14px;
+    padding: 8px;
+  }
 }

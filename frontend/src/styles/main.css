@@ -15,29 +15,33 @@ body {
 
 #root {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  padding: 32px 16px;
 }
 
+/* Main app container */
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-  flex: 1;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* Headings */
+h1, h2, h3 {
   color: var(--primary-blue);
-  margin-bottom: 10px;
 }
 
-p {
-  color: var(--text-secondary);
+h2 {
+  font-size: 28px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 10px;
-  }
+h3 {
+  font-size: 20px;
+  margin-top: 24px;
+}
+
+/* Disabled */
+button:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

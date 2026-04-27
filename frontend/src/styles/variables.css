@@ -1,16 +1,20 @@
 :root {
-  --primary-blue: #1976d2;
-  --primary-blue-light: #42a5f5;
-  --primary-blue-dark: #1565c0;
-  --secondary-green: #388e3c;
-  --secondary-green-light: #4caf50;
-  --secondary-green-dark: #2e7d32;
-  --accent-yellow: #ffeb3b; /* Optional for highlights */
-  --background-light: #f5f5f5;
-  --background-dark: #e0e0e0;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --border-radius: 8px;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --transition: all 0.3s ease;
+  /* Colors */
+  --primary-blue: #007d8a;        /* Deep teal */
+  --primary-blue-dark: #005e66;   /* Darker deep teal */
+  --primary-blue-light: #e4f5f6;  /* Very light teal tint */
+
+  --secondary-green: #f9b233;     /* Warm accent orange */
+  --secondary-green-dark: #d9982b; /* Darker accent */
+
+  --background-light: #f6fbfb;    /* Clean, cool background */
+  --background-dark: #e0eeee;     /* Subtle contrast background */
+
+  --text-primary: #123a3f;        /* Dark blue‑teal for readability */
+  --text-secondary: #4f7f84;      /* Muted teal text */
+
+  /* UI */
+  --border-radius: 10px;
+  --shadow: 0 10px 30px rgba(0, 125, 138, 0.15); /* Teal‑tinted shadow */
+  --transition: all 0.2s ease;
 }

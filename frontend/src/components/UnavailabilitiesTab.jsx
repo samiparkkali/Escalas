@@ -25,7 +25,6 @@ const UnavailabilitiesTab = ({
       setError('');
     } catch (err) {
       setError('Failed to load unavailabilities');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -38,19 +37,19 @@ const UnavailabilitiesTab = ({
       setLoading(true);
       const response = await axios.post('/api/unavailabilities', {
         professional_id: selectedProfessional,
-        date,
+        date, // yyyy-mm-dd
         shift_type: shiftType,
       });
 
-      setUnavailabilities([...unavailabilities, response.data]);
+      // ✅ latest state
+      setUnavailabilities(prev => [...prev, response.data]);
 
       setSelectedProfessional('');
       setDate('');
       setShiftType('morning');
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to add unavailability');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -60,118 +59,96 @@ const UnavailabilitiesTab = ({
     try {
       setLoading(true);
       await axios.delete(`/api/unavailabilities/${id}`);
-      setUnavailabilities(unavailabilities.filter((u) => u.id !== id));
-    } catch (err) {
+
+      // ✅ latest state
+      setUnavailabilities(prev =>
+        prev.filter(u => u.id !== id)
+      );
+    } catch {
       setError('Failed to remove unavailability');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getProfessionalName = (professionalId) => {
-    const prof = professionals.find((p) => p.id === professionalId);
-    return prof ? prof.name : 'Unknown professional';
-  };
+  const getProfessionalName = (id) =>
+    professionals.find(p => p.id === id)?.name || 'Unknown';
 
   return (
-    <div className="tab-panel">
-      <div className="tab-header">
-        <h2>Manage Unavailabilities</h2>
-      </div>
+    <>
+      <h3>Manage Unavailabilities</h3>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && <p>{error}</p>}
 
       {/* Form */}
-      <div className="form-group">
-        <label className="form-label">Professional</label>
-        <select
-          className="form-input"
-          value={selectedProfessional}
-          onChange={(e) => setSelectedProfessional(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">Select professional</option>
-          {professionals.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.role})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Date</label>
-        <input
-          type="date"
-          className="form-input"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          disabled={loading}
-        />
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Shift Type</label>
-        <select
-          className="form-input"
-          value={shiftType}
-          onChange={(e) => setShiftType(e.target.value)}
-          disabled={loading}
-        >
-          <option value="morning">Morning</option>
-          <option value="night">Night</option>
-        </select>
-      </div>
-
-      <button
-        className="btn-primary"
-        onClick={handleAddUnavailability}
-        disabled={!selectedProfessional || !date || loading}
+      <select
+        value={selectedProfessional}
+        onChange={(e) => setSelectedProfessional(e.target.value)}
+        disabled={loading}
       >
+        <option value="">Select professional</option>
+        {professionals.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name} ({p.role})
+          </option>
+        ))}
+      </select>
+
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        disabled={loading}
+      />
+
+      <select
+        value={shiftType}
+        onChange={(e) => setShiftType(e.target.value)}
+        disabled={loading}
+      >
+        <option value="morning">Morning</option>
+        <option value="night">Night</option>
+      </select>
+
+      <button onClick={handleAddUnavailability} disabled={loading}>
         Add Unavailability
       </button>
 
       {/* List */}
-      <h3 style={{ marginTop: '24px' }}>
-        Current Unavailabilities ({unavailabilities.length})
-      </h3>
+      <h4>Current Unavailabilities ({unavailabilities.length})</h4>
 
       {unavailabilities.length > 0 ? (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Professional</th>
-                <th>Date</th>
-                <th>Shift</th>
-                <th>Actions</th>
+        <table>
+          <thead>
+            <tr>
+              <th>Professional</th>
+              <th>Date</th>
+              <th>Shift</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {unavailabilities.map(u => (
+              <tr key={u.id}>
+                <td>{getProfessionalName(u.professional_id)}</td>
+                <td>{formatDisplayDate(u.date)}</td>
+                <td>{u.shift_type}</td>
+                <td>
+                  <button
+                    onClick={() => handleRemoveUnavailability(u.id)}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {unavailabilities.map((u) => (
-                <tr key={u.id}>
-                  <td>{getProfessionalName(u.professional_id)}</td>
-                  <td>{formatDisplayDate(u.date)}</td>
-                  <td>{u.shift_type}</td>
-                  <td>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => handleRemoveUnavailability(u.id)}
-                      disabled={loading}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       ) : (
         !loading && <p>No unavailabilities set</p>
       )}
-    </div>
+    </>
   );
 };
 
