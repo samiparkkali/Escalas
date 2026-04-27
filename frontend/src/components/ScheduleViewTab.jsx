@@ -11,7 +11,7 @@ const ScheduleViewTab = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleGenerateSchedule = async () => {
+  const handleGenerateSchedule = async (is24hMode) => {
     setLoading(true);
     setError('');
 
@@ -20,6 +20,8 @@ const ScheduleViewTab = ({
         config: {
           start_date: toIsoDate(config.startDate),
           end_date: toIsoDate(config.endDate),
+          
+          is_24h: is24hMode,
 
           morning_weekday_specialist: config.morningWeekdaySpecialist,
           night_weekday_specialist: config.nightWeekdaySpecialist,
@@ -48,15 +50,37 @@ const ScheduleViewTab = ({
     }
   };
 
+  const handleExportSchedule = () => {
+    window.location.href = '/api/schedule/export';
+  };
+
   return (
-    <>
-      <h3>Generate Schedule</h3>
+    <div className="tab-panel">
+      <div className="tab-header">
+        <h2>Generate Schedule</h2>
+      </div>
 
-      <button onClick={handleGenerateSchedule} disabled={loading}>
-        {loading ? 'Generating…' : 'Generate Schedule'}
-      </button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <button className="btn-secondary" onClick={() => handleGenerateSchedule(false)} disabled={loading}>
+          {loading ? 'Generating…' : 'Generate Standard Schedule'}
+        </button>
+        
+        <button className="btn-secondary" onClick={() => handleGenerateSchedule(true)} disabled={loading}>
+          {loading ? 'Generating…' : 'Generate Schedule - 24h Format'}
+        </button>
 
-      {error && <p>{error}</p>}
+        {schedule && (
+          <button 
+            className="btn-primary" 
+            onClick={handleExportSchedule}
+            style={{ marginLeft: 'auto' }}
+          >
+            Export Schedule
+          </button>
+        )}
+      </div>
+
+      {error && <div className="alert error" style={{ marginTop: '20px' }}>{error}</div>}
 
       {schedule && (
         <>
@@ -64,7 +88,8 @@ const ScheduleViewTab = ({
             Assignments ({schedule.assignments?.length || 0})
           </h4>
 
-          <table>
+          <div className="table-container">
+            <table className="table">
             <thead>
               <tr>
                 <th>Professional</th>
@@ -84,6 +109,7 @@ const ScheduleViewTab = ({
               ))}
             </tbody>
           </table>
+          </div>
 
           {schedule.unassigned_shifts?.length > 0 && (
             <>
@@ -92,7 +118,8 @@ const ScheduleViewTab = ({
                 {schedule.unassigned_shifts.length})
               </h4>
 
-              <table>
+              <div className="table-container">
+                <table className="table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -112,11 +139,12 @@ const ScheduleViewTab = ({
                   ))}
                 </tbody>
               </table>
+              </div>
             </>
           )}
         </>
       )}
-    </>
+    </div>
   );
 };
 

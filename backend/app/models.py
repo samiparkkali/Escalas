@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import date
-from typing import List
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
 class Role(str, Enum):
@@ -43,15 +43,17 @@ class ScheduleConfigModel(BaseModel):
     start_date: date
     end_date: date
 
-    morning_weekday_specialist: int
-    night_weekday_specialist: int
-    morning_weekend_specialist: int
-    night_weekend_specialist: int
+    is_24h: bool = Field(default=False)
 
-    morning_weekday_intern: int
-    night_weekday_intern: int
-    morning_weekend_intern: int
-    night_weekend_intern: int
+    morning_weekday_specialist: int = Field(default=1, ge=0)
+    night_weekday_specialist: int = Field(default=1, ge=0)
+    morning_weekend_specialist: int = Field(default=1, ge=0)
+    night_weekend_specialist: int = Field(default=1, ge=0)
+
+    morning_weekday_intern: int = Field(default=2, ge=0)
+    night_weekday_intern: int = Field(default=2, ge=0)
+    morning_weekend_intern: int = Field(default=2, ge=0)
+    night_weekend_intern: int = Field(default=2, ge=0)
 
 
 class GenerateScheduleRequest(BaseModel):
@@ -84,4 +86,11 @@ class StatisticsResponse(BaseModel):
     role: Role
     morning: int
     night: int
+    weekday: int
+    weekend: int
     total: int
+
+
+class FullStatisticsResponse(BaseModel):
+    professional_stats: List[StatisticsResponse]
+    unassigned_shifts: List[UnassignedShiftResponse]

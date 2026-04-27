@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -24,6 +24,7 @@ class Shift:
     date: date
     shift_type: ShiftType
     is_weekend: bool
+    weekday_num: int
     required_specialists: int
     required_interns: int
 
@@ -36,11 +37,21 @@ class ProfessionalLoad:
     night: int = 0
     weekday: int = 0
     weekend: int = 0
+    saturday: int = 0
+    sunday: int = 0
+    blocked_until_index: int = 0
 
-    def sort_key(self, shift_type: ShiftType, is_weekend: bool):
+    def sort_key(self, shift_type: ShiftType, is_weekend: bool, weekday_num: int):
+        specific_day_load = 0
+        if is_weekend:
+            if weekday_num == 5: # Saturday
+                specific_day_load = self.saturday
+            elif weekday_num == 6: # Sunday
+                specific_day_load = self.sunday
+
         shift_count = self.morning if shift_type == ShiftType.morning else self.night
         day_count = self.weekend if is_weekend else self.weekday
-        return (self.total, shift_count, day_count, self.professional.name)
+        return (self.total, day_count, specific_day_load, shift_count, self.professional.name)
 
 
 class ScheduleService:
@@ -68,32 +79,38 @@ class ScheduleService:
         assignments: List[AssignmentResponse] = []
         unassigned_shifts: List[UnassignedShiftResponse] = []
 
-        for shift in shifts:
+        step = 2 if config.is_24h else 1
+        for idx in range(0, len(shifts), step):
+            current_group = shifts[idx : idx + step]
+
             assigned_specialists = self._assign_role(
-                shift,
+                current_group,
+                idx,
                 Role.specialist,
                 professional_loads,
                 assignments,
             )
             assigned_interns = self._assign_role(
-                shift,
+                current_group,
+                idx,
                 Role.intern,
                 professional_loads,
                 assignments,
             )
 
-            missing_specialists = max(0, shift.required_specialists - assigned_specialists)
-            missing_interns = max(0, shift.required_interns - assigned_interns)
+            for shift in current_group:
+                missing_specialists = max(0, shift.required_specialists - assigned_specialists)
+                missing_interns = max(0, shift.required_interns - assigned_interns)
 
-            if missing_specialists or missing_interns:
-                unassigned_shifts.append(
-                    UnassignedShiftResponse(
-                        date=shift.date,
-                        shift_type=shift.shift_type,
-                        required_specialists=missing_specialists,
-                        required_interns=missing_interns,
+                if missing_specialists or missing_interns:
+                    unassigned_shifts.append(
+                        UnassignedShiftResponse(
+                            date=shift.date,
+                            shift_type=shift.shift_type,
+                            required_specialists=missing_specialists,
+                            required_interns=missing_interns,
+                        )
                     )
-                )
 
         self._current_schedule = {
             "assignments": [a.model_dump() for a in assignments],
@@ -110,9 +127,9 @@ class ScheduleService:
             else "Schedule generated with unfilled shifts",
         )
 
-    def get_statistics(self) -> List[StatisticsResponse]:
+    def get_statistics(self) -> Dict:
         if not self._current_schedule:
-            return []
+            return {"professional_stats": [], "unassigned_shifts": []}
 
         assignments: List[AssignmentResponse] = self._current_schedule["assignments_raw"]
         stats: Dict[str, StatisticsResponse] = {}
@@ -124,6 +141,8 @@ class ScheduleService:
                     role=assignment.professional_role,
                     morning=0,
                     night=0,
+                    weekday=0,
+                    weekend=0,
                     total=0,
                 )
 
@@ -132,33 +151,87 @@ class ScheduleService:
                 record.morning += 1
             else:
                 record.night += 1
+
+            if assignment.shift_date.weekday() >= 5:
+                record.weekend += 1
+            else:
+                record.weekday += 1
+
             record.total += 1
 
-        return list(stats.values())
+        return {
+            "professional_stats": list(stats.values()),
+            "unassigned_shifts": self._current_schedule.get("unassigned_shifts", [])
+        }
 
     def export_schedule_csv(self) -> str:
         if not self._current_schedule:
             return "No schedule generated yet\n"
 
-        assignments: List[AssignmentResponse] = self._current_schedule["assignments_raw"]
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["date", "shift_type", "role", "professional_name"])
+        assignments_raw: List[AssignmentResponse] = self._current_schedule.get("assignments_raw", [])
+        
+        # Collect all unique dates and sort them
+        unique_dates = sorted(list(set(a.shift_date for a in assignments_raw)))
 
-        sorted_assignments = sorted(
-            assignments,
-            key=lambda item: (item.shift_date, item.shift_type, item.professional_role, item.professional_name),
+        # Prepare the header rows
+        # Repeating the date in the first row and adding padding to shift names
+        # forces Excel to widen the columns, preventing the '####' truncation.
+        header_row_1 = ["Professional Name"] 
+        header_row_2 = [""] # Empty cell for the professional name column
+
+        for date_val in unique_dates:
+            date_str = date_val.strftime("%d-%m-%Y")
+            header_row_1.extend([date_str, date_str]) 
+            header_row_2.extend(["   Morning   ", "   Night   "])
+
+        # Group assignments by professional and then by (date, shift_type)
+        professional_assignments: Dict[str, Dict[tuple, AssignmentResponse]] = {}
+        for assignment in assignments_raw:
+            prof_name = assignment.professional_name
+            if prof_name not in professional_assignments:
+                professional_assignments[prof_name] = {}
+            professional_assignments[prof_name][(assignment.shift_date, assignment.shift_type)] = assignment
+
+        # Get all professionals involved in the schedule, sorted by role and then name
+        # This ensures specialists are listed before interns
+        all_professionals_in_schedule = sorted(
+            list(set(a.professional_name for a in assignments_raw)),
+            key=lambda name: (
+                # Role.specialist starts with 's', Role.intern starts with 'i'
+                # We reverse the role sort to put 'specialist' first
+                0 if next(p.role for p in self.professional_repository.get_all() if p.name == name) == Role.specialist else 1,
+                name
+            )
         )
 
-        for assignment in sorted_assignments:
-            writer.writerow(
-                [
-                    assignment.shift_date.isoformat(),
-                    assignment.shift_type.value,
-                    assignment.professional_role.value,
-                    assignment.professional_name,
-                ]
-            )
+        # Prepare data rows
+        csv_rows = []
+        for prof_name in all_professionals_in_schedule:
+            row_data = [prof_name]
+            for date_val in unique_dates:
+                # Check for morning shift
+                if (date_val, ShiftType.morning) in professional_assignments.get(prof_name, {}):
+                    row_data.append("X")
+                else:
+                    row_data.append("")
+                
+                # Check for night shift
+                if (date_val, ShiftType.night) in professional_assignments.get(prof_name, {}):
+                    row_data.append("X")
+                else:
+                    row_data.append("")
+            csv_rows.append(row_data)
+
+        # Write to StringIO
+        output = StringIO(newline='')
+        # Force Excel to recognize semicolon as the delimiter immediately
+        output.write("sep=;\n")
+        
+        writer = csv.writer(output, delimiter=';')
+        
+        writer.writerow(header_row_1)
+        writer.writerow(header_row_2)
+        writer.writerows(csv_rows)
 
         return output.getvalue()
 
@@ -166,13 +239,15 @@ class ScheduleService:
         shifts: List[Shift] = []
         current = config.start_date
         while current <= config.end_date:
-            is_weekend = current.weekday() >= 5
+            weekday_num = current.weekday()
+            is_weekend = weekday_num >= 5
             shifts.append(
                 Shift(
                     id=str(uuid4()),
                     date=current,
                     shift_type=ShiftType.morning,
                     is_weekend=is_weekend,
+                    weekday_num=weekday_num,
                     required_specialists=config.morning_weekend_specialist
                     if is_weekend
                     else config.morning_weekday_specialist,
@@ -187,6 +262,7 @@ class ScheduleService:
                     date=current,
                     shift_type=ShiftType.night,
                     is_weekend=is_weekend,
+                    weekday_num=weekday_num,
                     required_specialists=config.night_weekend_specialist
                     if is_weekend
                     else config.night_weekday_specialist,
@@ -201,48 +277,79 @@ class ScheduleService:
 
     def _assign_role(
         self,
-        shift: Shift,
+        shifts: List[Shift],
+        start_idx: int,
         role: Role,
         professional_loads: Dict[str, ProfessionalLoad],
         assignments: List[AssignmentResponse],
     ) -> int:
-        required = (
-            shift.required_specialists
-            if role == Role.specialist
-            else shift.required_interns
-        )
+        if not shifts:
+            return 0
+
+        # Determine requirement based on the primary shift in the group
+        lead_shift = shifts[0]
+        required = 0
+        for s in shifts:
+            req = s.required_specialists if role == Role.specialist else s.required_interns
+            required = max(required, req)
+
         if required == 0:
             return 0
 
-        candidates = [
-            load
-            for load in professional_loads.values()
-            if load.professional.role == role
-            and not self.unavailability_repository.is_unavailable(
-                load.professional.id, shift.date, shift.shift_type
-            )
-        ]
-        candidates.sort(key=lambda load: load.sort_key(shift.shift_type, shift.is_weekend))
+        # Filter professionals by role and check availability
+        candidates = []
+        for load in professional_loads.values():
+            if load.professional.role == role:
+                # Check if professional is in a rest period
+                if load.blocked_until_index > start_idx:
+                    continue
+
+                # Must be available for ALL shifts in the group (e.g., Morning AND Night)
+                is_available = True
+                for s in shifts:
+                    if self.unavailability_repository.is_unavailable(
+                        load.professional.id, s.date, s.shift_type
+                    ):
+                        is_available = False
+                        break
+
+                if is_available:
+                    candidates.append(load)
+
+        # Sort by load (least shifts first) to ensure fair distribution
+        candidates.sort(key=lambda load: load.sort_key(lead_shift.shift_type, lead_shift.is_weekend, lead_shift.weekday_num))
 
         assigned = 0
         for load in candidates[:required]:
-            assignments.append(
-                AssignmentResponse(
-                    professional_name=load.professional.name,
-                    professional_role=role,
-                    shift_date=shift.date,
-                    shift_type=shift.shift_type,
+            for s_idx, s in enumerate(shifts):
+                assignments.append(
+                    AssignmentResponse(
+                        professional_name=load.professional.name,
+                        professional_role=role,
+                        shift_date=s.date,
+                        shift_type=s.shift_type,
+                    )
                 )
-            )
+                load.total += 1
+                if s.shift_type == ShiftType.morning:
+                    load.morning += 1
+                else:
+                    load.night += 1
+                if s.is_weekend:
+                    load.weekend += 1
+                else:
+                    load.weekday += 1
+
+                if s.weekday_num == 5:
+                    load.saturday += 1
+                elif s.weekday_num == 6:
+                    load.sunday += 1
+
+                # Rest period: if scheduled for night, unavailable for next two shifts
+                # In 24h mode, the block ends at night, ensuring a full day off after
+                if s.shift_type == ShiftType.night:
+                    load.blocked_until_index = start_idx + s_idx + 3
+
             assigned += 1
-            load.total += 1
-            if shift.shift_type == ShiftType.morning:
-                load.morning += 1
-            else:
-                load.night += 1
-            if shift.is_weekend:
-                load.weekend += 1
-            else:
-                load.weekday += 1
 
         return assigned

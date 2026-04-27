@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 const StatisticsTab = ({ statistics, setStatistics }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadStatistics();
+    // Only fetch if we don't already have statistics passed as props
+    if (!statistics || statistics.length === 0) {
+      loadStatistics();
+    }
   }, []);
 
   const loadStatistics = async () => {
@@ -14,14 +18,16 @@ const StatisticsTab = ({ statistics, setStatistics }) => {
       setLoading(true);
       const response = await axios.get('/api/schedule/statistics');
       setStatistics(response.data);
-      setError('');
     } catch (err) {
-      setError('Failed to load statistics');
-      console.error('Error loading statistics:', err);
+      setError('Failed to load statistics from server');
     } finally {
       setLoading(false);
     }
   };
+
+  const profStats = statistics?.professional_stats || [];
+  const unassignedShifts = statistics?.unassigned_shifts || [];
+  const hasData = profStats.length > 0 || unassignedShifts.length > 0;
 
   return (
     <div className="tab-panel">
@@ -31,31 +37,70 @@ const StatisticsTab = ({ statistics, setStatistics }) => {
 
       {error && <div className="alert error">{error}</div>}
 
-      {statistics && statistics.length > 0 ? (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Professional</th>
-                <th>Morning Shifts</th>
-                <th>Night Shifts</th>
-                <th>Total Shifts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {statistics.map((stat, index) => (
-                <tr key={index}>
-                  <td>{stat.name}</td>
-                  <td>{stat.morning}</td>
-                  <td>{stat.night}</td>
-                  <td>{stat.total}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {hasData ? (
+        <>
+          {profStats.length > 0 && (
+            <div className="table-container">
+              <h4>Professional Workload</h4>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Professional</th>
+                    <th>Morning</th>
+                    <th>Night</th>
+                    <th>Weekday</th>
+                    <th>Weekend</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profStats.map((stat, index) => (
+                    <tr key={index}>
+                      <td>{stat.name}</td>
+                      <td>{stat.morning}</td>
+                      <td>{stat.night}</td>
+                      <td>{stat.weekday}</td>
+                      <td>{stat.weekend}</td>
+                      <td><strong>{stat.total}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {unassignedShifts.length > 0 && (
+            <div className="table-container" style={{ marginTop: '40px' }}>
+              <h4 style={{ color: '#b42318' }}>Missing (Unassigned) Shifts</h4>
+              <table className="table">
+                <thead style={{ backgroundColor: '#fdecea' }}>
+                  <tr style={{ color: '#b42318' }}>
+                    <th>Date</th>
+                    <th>Shift</th>
+                    <th>Missing Specialists</th>
+                    <th>Missing Interns</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedShifts.map((s, i) => (
+                    <tr key={i} style={{ backgroundColor: '#fffbfa' }}>
+                      <td>{formatDisplayDate(s.date)}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{s.shift_type}</td>
+                      <td style={{ fontWeight: s.required_specialists > 0 ? 'bold' : 'normal' }}>
+                        {s.required_specialists}
+                      </td>
+                      <td style={{ fontWeight: s.required_interns > 0 ? 'bold' : 'normal' }}>
+                        {s.required_interns}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       ) : (
-        <p style={{ color: '#666', marginTop: '12px' }}>
+        <p className="empty-state-message">
           {loading
             ? 'Loading statistics...'
             : 'No statistics available. Generate a schedule first.'}

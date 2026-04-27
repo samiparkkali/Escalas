@@ -32,23 +32,37 @@ const UnavailabilitiesTab = ({
 
   const handleAddUnavailability = async () => {
     if (!selectedProfessional || !date) return;
+    setError(''); // Clear previous errors
 
     try {
       setLoading(true);
-      const response = await axios.post('/api/unavailabilities', {
-        professional_id: selectedProfessional,
-        date, // yyyy-mm-dd
-        shift_type: shiftType,
-      });
+      let newUnavailabilities = [];
 
-      // ✅ latest state
-      setUnavailabilities(prev => [...prev, response.data]);
+      if (shiftType === 'all_day') {
+        const morningResponse = await axios.post('/api/unavailabilities', {
+          professional_id: selectedProfessional,
+          date,
+          shift_type: 'morning',
+        });
+        newUnavailabilities.push(morningResponse.data);
 
-      setSelectedProfessional('');
-      setDate('');
-      setShiftType('morning');
-      setError('');
-    } catch {
+        const nightResponse = await axios.post('/api/unavailabilities', {
+          professional_id: selectedProfessional,
+          date,
+          shift_type: 'night',
+        });
+        newUnavailabilities.push(nightResponse.data);
+      } else {
+        const response = await axios.post('/api/unavailabilities', {
+          professional_id: selectedProfessional,
+          date,
+          shift_type: shiftType,
+        });
+        newUnavailabilities.push(response.data);
+      }
+
+      setUnavailabilities(prev => [...prev, ...newUnavailabilities]);
+    } catch (err) {
       setError('Failed to add unavailability');
     } finally {
       setLoading(false);
@@ -74,50 +88,68 @@ const UnavailabilitiesTab = ({
     professionals.find(p => p.id === id)?.name || 'Unknown';
 
   return (
-    <>
-      <h3>Manage Unavailabilities</h3>
+    <div className="tab-panel">
+      <div className="tab-header">
+        <h2>Manage Unavailabilities</h2>
+      </div>
 
-      {error && <p>{error}</p>}
+      {error && <div className="alert error">{error}</div>}
 
       {/* Form */}
-      <select
-        value={selectedProfessional}
-        onChange={(e) => setSelectedProfessional(e.target.value)}
-        disabled={loading}
-      >
-        <option value="">Select professional</option>
-        {professionals.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.role})
-          </option>
-        ))}
-      </select>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap' }}>
+        <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+          <label className="form-label">Professional</label>
+          <select
+            className="form-input"
+            value={selectedProfessional}
+            onChange={(e) => setSelectedProfessional(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">Select professional</option>
+            {professionals.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.role})
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        disabled={loading}
-      />
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label className="form-label">Date</label>
+          <input
+            type="date"
+            className="form-input"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            disabled={loading}
+          />
+        </div>
 
-      <select
-        value={shiftType}
-        onChange={(e) => setShiftType(e.target.value)}
-        disabled={loading}
-      >
-        <option value="morning">Morning</option>
-        <option value="night">Night</option>
-      </select>
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label className="form-label">Shift</label>
+          <select
+            className="form-input"
+            value={shiftType}
+            onChange={(e) => setShiftType(e.target.value)}
+            disabled={loading}
+          >
+            <option value="morning">Morning</option>
+            <option value="night">Night</option>
+            <option value="all_day">All Day</option>
+          </select>
+        </div>
 
-      <button onClick={handleAddUnavailability} disabled={loading}>
-        Add Unavailability
-      </button>
+        <button className="btn-primary" onClick={handleAddUnavailability} disabled={loading}>
+          {loading ? 'Adding...' : 'Add Unavailability'}
+        </button>
+      </div>
 
       {/* List */}
       <h4>Current Unavailabilities ({unavailabilities.length})</h4>
 
       {unavailabilities.length > 0 ? (
-        <table>
+        <div className="table-container">
+          <table className="table">
           <thead>
             <tr>
               <th>Professional</th>
@@ -133,7 +165,7 @@ const UnavailabilitiesTab = ({
                 <td>{formatDisplayDate(u.date)}</td>
                 <td>{u.shift_type}</td>
                 <td>
-                  <button
+                  <button                    className="btn-secondary"
                     onClick={() => handleRemoveUnavailability(u.id)}
                     disabled={loading}
                   >
@@ -144,10 +176,11 @@ const UnavailabilitiesTab = ({
             ))}
           </tbody>
         </table>
+        </div>
       ) : (
-        !loading && <p>No unavailabilities set</p>
+        !loading && <p className="empty-state-message">No unavailabilities set</p>
       )}
-    </>
+    </div>
   );
 };
 

@@ -106,6 +106,10 @@ class UnavailabilityRepository:
         if not professional:
             return None
 
+        # Prevent duplicate unavailabilities
+        if self.is_unavailable(professional_id, date_value, shift_type):
+            return None
+
         unavailability_id = str(uuid4())
         unavailability = UnavailabilityModel(
             id=unavailability_id,

@@ -1,11 +1,11 @@
 :root {
   /* Colors */
-  --primary-blue: #007d8a;        /* Deep teal */
-  --primary-blue-dark: #005e66;   /* Darker deep teal */
-  --primary-blue-light: #e4f5f6;  /* Very light teal tint */
+  --primary-teal: #007d8a;        /* Deep teal */
+  --primary-teal-dark: #005e66;   /* Darker deep teal */
+  --primary-teal-light: #e4f5f6;  /* Very light teal tint */
 
-  --secondary-green: #f9b233;     /* Warm accent orange */
-  --secondary-green-dark: #d9982b; /* Darker accent */
+  --secondary-orange: #f9b233;     /* Warm accent orange */
+  --secondary-orange-dark: #d9982b; /* Darker accent */
 
   --background-light: #f6fbfb;    /* Clean, cool background */
   --background-dark: #e0eeee;     /* Subtle contrast background */

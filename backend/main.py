@@ -3,14 +3,14 @@ sys.path.append('../src')
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from io import StringIO
 from typing import List
 
 from app.models import (
     ProfessionalModel, CreateProfessionalRequest, UnavailabilityModel,
     CreateUnavailabilityRequest, GenerateScheduleRequest, ScheduleResponse,
-    StatisticsResponse
+    FullStatisticsResponse
 )
 from app.dependencies import deps
 
@@ -19,7 +19,7 @@ app = FastAPI(title="Shift Scheduler API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev server
+    allow_origins=["http://localhost:3000", "http://localhost:5173"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +36,11 @@ async def create_professional(request: CreateProfessionalRequest):
 
 @app.put("/api/professionals/{professional_id}", response_model=ProfessionalModel)
 async def update_professional(professional_id: str, request: CreateProfessionalRequest):
-    professional = deps.professional_repository.update(professional_id, request.name)
+    professional = deps.professional_repository.update(
+        professional_id, 
+        name=request.name, 
+        role=request.role
+    )
     if not professional:
         raise HTTPException(status_code=404, detail="Professional not found")
     return professional
@@ -58,11 +62,15 @@ async def get_unavailabilities():
 
 @app.post("/api/unavailabilities", response_model=UnavailabilityModel)
 async def create_unavailability(request: CreateUnavailabilityRequest):
+    if not deps.professional_repository.get_by_id(request.professional_id):
+        raise HTTPException(status_code=404, detail="Professional not found")
+
     unavailability = deps.unavailability_repository.create(
         request.professional_id, request.date, request.shift_type
     )
     if not unavailability:
-        raise HTTPException(status_code=404, detail="Professional not found")
+        # Since we checked the professional above, None implies it already exists
+        raise HTTPException(status_code=400, detail="Unavailability already registered for this shift")
     return unavailability
 
 @app.delete("/api/unavailabilities/{unavailability_id}")
@@ -81,13 +89,14 @@ async def generate_schedule(request: GenerateScheduleRequest):
 @app.get("/api/schedule/export")
 async def export_schedule():
     csv_content = deps.schedule_service.export_schedule_csv()
-    return StreamingResponse(
-        StringIO(csv_content),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=schedule.csv"}
+    # Using utf-8-sig (BOM) is critical for Excel to render Á, É, Í etc. correctly
+    return Response(
+        content=csv_content.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": "attachment; filename=escalas_hba.csv"}
     )
 
-@app.get("/api/schedule/statistics", response_model=List[StatisticsResponse])
+@app.get("/api/schedule/statistics", response_model=FullStatisticsResponse)
 async def get_statistics():
     return deps.schedule_service.get_statistics()
 

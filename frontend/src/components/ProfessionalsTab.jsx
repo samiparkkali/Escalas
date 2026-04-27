@@ -69,7 +69,6 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
       setLoading(true);
       await axios.delete(`/api/professionals/${id}`);
 
-      // ✅ ALWAYS use latest state
       setProfessionals(prev =>
         prev.filter(p => p.id !== id)
       );
@@ -81,65 +80,79 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
   };
 
   return (
-    <>
-      <h3>Manage Professionals</h3>
+    <div className="tab-panel">
+      <div className="tab-header">
+        <h2>Manage Professionals</h2>
+      </div>
 
-      {error && <p>{error}</p>}
+      {error && <div className="alert error">{error}</div>}
 
-      <input
-        placeholder="Professional Name"
-        value={newProfessionalName}
-        onChange={(e) => setNewProfessionalName(e.target.value)}
-        disabled={loading}
-      />
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '32px' }}>
+        <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+          <label className="form-label">Name</label>
+          <input
+            className="form-input"
+            placeholder="e.g. Dra. Maria Mateus"
+            value={newProfessionalName}
+            onChange={(e) => setNewProfessionalName(e.target.value)}
+            disabled={loading}
+          />
+        </div>
 
-      <select
-        value={newProfessionalRole}
-        onChange={(e) => setNewProfessionalRole(e.target.value)}
-        disabled={loading}
-      >
-        <option value="specialist">Specialist</option>
-        <option value="intern">Intern</option>
-      </select>
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label className="form-label">Role</label>
+          <select
+            className="form-input"
+            value={newProfessionalRole}
+            onChange={(e) => setNewProfessionalRole(e.target.value)}
+            disabled={loading}
+          >
+            <option value="specialist">Specialist</option>
+            <option value="intern">Intern</option>
+          </select>
+        </div>
 
-      <button onClick={handleAddProfessional} disabled={loading}>
-        Add
-      </button>
+        <button className="btn-primary" onClick={handleAddProfessional} disabled={loading}>
+          {loading ? 'Adding...' : 'Add Professional'}
+        </button>
+      </div>
 
       <h4>Current Professionals ({professionals.length})</h4>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {professionals.map(p => (
-            <tr key={p.id}>
-              <td>{p.name}</td>
-              <td>{p.role}</td>
-              <td>
-                <button
-                  onClick={() => handleRemoveProfessional(p.id)}
-                  disabled={loading}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-
-          {professionals.length === 0 && !loading && (
+      <div className="table-container">
+        <table className="table">
+          <thead>
             <tr>
-              <td colSpan="3">No professionals added yet</td>
+              <th>Name</th>
+              <th>Role</th>
+              <th style={{ width: '100px' }} />
             </tr>
-          )}
-        </tbody>
-      </table>
-    </>
+          </thead>
+          <tbody>
+            {professionals.map(p => (
+              <tr key={p.id}>
+                <td>{p.name}</td>
+                <td>{p.role}</td>
+                <td>
+                  <button                    className="btn-secondary"
+                    onClick={() => handleRemoveProfessional(p.id)}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {professionals.length === 0 && !loading && (
+              <tr className="empty-state-message">
+                <td colSpan="3">No professionals added yet</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 };
 

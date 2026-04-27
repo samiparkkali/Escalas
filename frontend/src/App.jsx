@@ -5,19 +5,11 @@ import UnavailabilitiesTab from './components/UnavailabilitiesTab';
 import ScheduleConfigTab from './components/ScheduleConfigTab';
 import ScheduleViewTab from './components/ScheduleViewTab';
 import StatisticsTab from './components/StatisticsTab';
-import { toIsoDate } from './utils/dateUtils';
+import { getNextMonthRange } from './utils/dateUtils';
 
 function App() {
-
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-
-  // First day of next month
-  const startDate = toIsoDate(new Date(year, month + 1, 1));
-
-  // Last day of next month
-  const endDate = toIsoDate(new Date(year, month + 2, 0));
+  // Get pre-calculated dates for next month
+  const { startDate, endDate } = getNextMonthRange();
 
   const [activeTab, setActiveTab] = useState(0);
   const [professionals, setProfessionals] = useState([]);
@@ -41,17 +33,34 @@ function App() {
   const [statistics, setStatistics] = useState([]);
 
   return (
-    <>
-      <h2>HBA — Shift Scheduler</h2>
+    <div className="app-container">
+      <header style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <h1>HBA — Shift Scheduler</h1>
+      </header>
 
       {/* Tabs */}
-      <nav>
-        <button onClick={() => setActiveTab(0)}>Medical Professionals</button>
-        <button onClick={() => setActiveTab(1)}>Unavailabilities</button>
-        <button onClick={() => setActiveTab(2)}>Schedule Config</button>
-        <button onClick={() => setActiveTab(3)}>Generate Schedule</button>
-        <button onClick={() => setActiveTab(4)}>Statistics</button>
-      </nav>
+      <div className="tabs">
+        <button 
+          className={`tab-button ${activeTab === 0 ? 'active' : ''}`} 
+          onClick={() => setActiveTab(0)}
+        >Medical Professionals</button>
+        <button 
+          className={`tab-button ${activeTab === 1 ? 'active' : ''}`} 
+          onClick={() => setActiveTab(1)}
+        >Unavailabilities</button>
+        <button 
+          className={`tab-button ${activeTab === 2 ? 'active' : ''}`} 
+          onClick={() => setActiveTab(2)}
+        >Schedule Config</button>
+        <button 
+          className={`tab-button ${activeTab === 3 ? 'active' : ''}`} 
+          onClick={() => setActiveTab(3)}
+        >Generate Schedule</button>
+        <button 
+          className={`tab-button ${activeTab === 4 ? 'active' : ''}`} 
+          onClick={() => setActiveTab(4)}
+        >Statistics</button>
+      </div>
 
       {/* Tab content */}
       {activeTab === 0 && (
@@ -88,7 +97,7 @@ function App() {
       {activeTab === 4 && (
         <StatisticsTab statistics={statistics} />
       )}
-    </>
+    </div>
   );
 }
 
