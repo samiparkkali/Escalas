@@ -60,7 +60,6 @@ const UnavailabilitiesTab = ({
       setLoading(true);
       await axios.delete(`/api/unavailabilities/${id}`);
 
-      // ✅ latest state
       setUnavailabilities(prev =>
         prev.filter(u => u.id !== id)
       );

@@ -1,5 +1,3 @@
-// Input: "yyyy-mm-dd"
-// Output: "dd-mm-yyyy"
 export const formatDisplayDate = (isoDate) => {
   if (!isoDate) return '';
 
@@ -7,12 +5,13 @@ export const formatDisplayDate = (isoDate) => {
   return `${day}-${month}-${year}`;
 };
 
-// Input: "yyyy-mm-dd" | Date | undefined
-// Output: "yyyy-mm-dd"
 export const toIsoDate = (date) => {
   if (!date) return null;
-
   if (typeof date === 'string') return date;
 
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 };

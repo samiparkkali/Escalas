@@ -8,15 +8,16 @@ import StatisticsTab from './components/StatisticsTab';
 import { toIsoDate } from './utils/dateUtils';
 
 function App() {
+
   const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
 
-  const startDate = toIsoDate(
-    new Date(today.getFullYear(), today.getMonth() + 1, 1)
-  );
+  // First day of next month
+  const startDate = toIsoDate(new Date(year, month + 1, 1));
 
-  const endDate = toIsoDate(
-    new Date(today.getFullYear(), today.getMonth() + 2, 0)
-  );
+  // Last day of next month
+  const endDate = toIsoDate(new Date(year, month + 2, 0));
 
   const [activeTab, setActiveTab] = useState(0);
   const [professionals, setProfessionals] = useState([]);
@@ -25,16 +26,15 @@ function App() {
   const [scheduleConfig, setScheduleConfig] = useState({
     startDate,
     endDate,
-
     morningWeekdaySpecialist: 1,
     nightWeekdaySpecialist: 1,
     morningWeekendSpecialist: 1,
     nightWeekendSpecialist: 1,
 
-    morningWeekdayIntern: 1,
-    nightWeekdayIntern: 1,
-    morningWeekendIntern: 1,
-    nightWeekendIntern: 1,
+    morningWeekdayIntern: 2,
+    nightWeekdayIntern: 2,
+    morningWeekendIntern: 2,
+    nightWeekendIntern: 2,
   });
 
   const [schedule, setSchedule] = useState(null);
