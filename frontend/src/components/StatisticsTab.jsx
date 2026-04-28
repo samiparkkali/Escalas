@@ -19,7 +19,7 @@ const StatisticsTab = ({ statistics, setStatistics }) => {
       const response = await api.get('/api/schedule/statistics');
       setStatistics(response.data);
     } catch (err) {
-      setError('Failed to load statistics from server');
+      setError('Failed to load statistics from server.');
     } finally {
       setLoading(false);
     }

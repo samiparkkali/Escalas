@@ -50,9 +50,25 @@ const ScheduleViewTab = ({
     }
   };
 
-  const handleExportSchedule = () => {
-    window.location.href = '/api/schedule/export';
-  };
+  
+const handleExportSchedule = async () => {
+  try {
+    const response = await api.get('/api/schedule/export', {
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'escalas_hba.csv');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch {
+    setError('Failed to export schedule');
+  }
+};
+
 
   return (
     <div className="tab-panel">

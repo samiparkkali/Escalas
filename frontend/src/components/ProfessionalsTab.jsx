@@ -17,18 +17,11 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
       setLoading(true);
       const response = await api.get('/api/professionals');
 
-      setProfessionals(
-        response.data.map(p => ({
-          id: p.id,
-          name: p.name,
-          role: p.role,
-          isActive: p.is_active,
-        }))
-      );
+      setProfessionals(response.data);
 
       setError('');
     } catch {
-      setError('Loading professionals not yet implemented. Please add professionals manually.');
+      setError('Loading professionals is not possible at the moment.');
     } finally {
       setLoading(false);
     }
@@ -45,15 +38,8 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
         role: newProfessionalRole,
       });
 
-      setProfessionals(prev => [
-        ...prev,
-        {
-          id: response.data.id,
-          name: response.data.name,
-          role: response.data.role,
-          isActive: response.data.is_active,
-        },
-      ]);
+      setProfessionals(prev => [...prev, response.data]
+        );
 
       setNewProfessionalName('');
       setNewProfessionalRole(lastSelectedRole);

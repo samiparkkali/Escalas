@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import Login from './components/Login';
 import ProfessionalsTab from './components/ProfessionalsTab';
 import UnavailabilitiesTab from './components/UnavailabilitiesTab';
 import ScheduleConfigTab from './components/ScheduleConfigTab';
@@ -8,7 +9,12 @@ import StatisticsTab from './components/StatisticsTab';
 import { getNextMonthRange } from './utils/dateUtils';
 
 function App() {
-  // Get pre-calculated dates for next month
+
+  
+  const [loggedIn, setLoggedIn] = useState(
+    Boolean(localStorage.getItem("token"))
+  );
+
   const { startDate, endDate } = getNextMonthRange();
 
   const [activeTab, setActiveTab] = useState(0);
@@ -31,6 +37,11 @@ function App() {
 
   const [schedule, setSchedule] = useState(null);
   const [statistics, setStatistics] = useState([]);
+
+  
+  if (!loggedIn) {
+    return <Login onSuccess={() => setLoggedIn(true)} />;
+  }
 
   return (
     <div className="app-container">
