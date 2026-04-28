@@ -1,21 +1,22 @@
 # Shift Scheduler
 
-A full-stack application for generating and managing work schedules.
+A full-stack application designed for efficient and intelligent healthcare shift management. This system provides an intuitive interface for managing professional rosters, tracking unavailabilities, and generating complex, fair, and optimized shift schedules.
 
 ## Architecture
 
 - **Backend**: Python FastAPI
-- **Frontend**: React with Material-UI
-- **Domain Logic**: Python classes for scheduling logic
+- **Frontend**: React 18 with Vite, featuring a custom "Teal & Orange" design system.
+- **Database**: SQLAlchemy ORM for robust data persistence.
+- **Domain Logic**: Python classes implementing a sophisticated scheduling algorithm.
 
 ## Setup
 
 ### Backend
 
 ```bash
-cd backend
-pip install -r requirements.txt
-python main.py
+cd backend # Navigate to the backend directory
+pip install -r requirements.txt # Install Python dependencies
+python main.py # Start the FastAPI server
 ```
 
 The backend will run on http://localhost:8000

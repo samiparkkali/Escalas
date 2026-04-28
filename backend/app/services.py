@@ -5,7 +5,7 @@ from uuid import uuid4
 import csv
 from io import StringIO
 
-from .models import (
+from .schemas import (
     GenerateScheduleRequest,
     AssignmentResponse,
     UnassignedShiftResponse,

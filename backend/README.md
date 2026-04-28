@@ -11,7 +11,8 @@ backend/
 ├── main.py              # FastAPI application and routes
 ├── app/
 │   ├── __init__.py      # Package initialization
-│   ├── models.py        # Pydantic models (DTOs)
+│   ├── models/          # SQLAlchemy Database models
+│   ├── schemas.py       # Pydantic models (DTOs)
 │   ├── services.py      # Business logic services
 │   ├── repositories.py  # Data access layer
 │   └── dependencies.py  # Dependency injection
