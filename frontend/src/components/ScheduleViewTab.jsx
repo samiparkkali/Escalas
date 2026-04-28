@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../utils/axios';
 import { formatDisplayDate, toIsoDate } from '../utils/dateUtils';
 
 const ScheduleViewTab = ({
@@ -16,7 +16,7 @@ const ScheduleViewTab = ({
     setError('');
 
     try {
-      const response = await axios.post('/api/schedule/generate', {
+      const response = await api.post('/api/schedule/generate', {
         config: {
           start_date: toIsoDate(config.startDate),
           end_date: toIsoDate(config.endDate),
@@ -37,7 +37,7 @@ const ScheduleViewTab = ({
 
       setSchedule(response.data);
 
-      const statsResponse = await axios.get('/api/schedule/statistics');
+      const statsResponse = await api.get('/api/schedule/statistics');
       setStatistics(statsResponse.data);
     } catch (err) {
       setError(

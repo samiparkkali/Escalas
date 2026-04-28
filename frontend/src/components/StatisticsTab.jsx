@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axios';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 const StatisticsTab = ({ statistics, setStatistics }) => {
@@ -16,7 +16,7 @@ const StatisticsTab = ({ statistics, setStatistics }) => {
   const loadStatistics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/schedule/statistics');
+      const response = await api.get('/api/schedule/statistics');
       setStatistics(response.data);
     } catch (err) {
       setError('Failed to load statistics from server');

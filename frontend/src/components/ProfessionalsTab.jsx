@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axios';
 
 const ProfessionalsTab = ({ professionals, setProfessionals }) => {
   const [newProfessionalName, setNewProfessionalName] = useState('');
   const [newProfessionalRole, setNewProfessionalRole] = useState('specialist');
+  const [lastSelectedRole, setLastSelectedRole] = useState('specialist');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -14,7 +15,7 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
   const loadProfessionals = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/professionals');
+      const response = await api.get('/api/professionals');
 
       setProfessionals(
         response.data.map(p => ({
@@ -27,7 +28,7 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
 
       setError('');
     } catch {
-      setError('Failed to load professionals');
+      setError('Loading professionals not yet implemented. Please add professionals manually.');
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
     try {
       setLoading(true);
 
-      const response = await axios.post('/api/professionals', {
+      const response = await api.post('/api/professionals', {
         name: newProfessionalName.trim(),
         role: newProfessionalRole,
       });
@@ -55,7 +56,7 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
       ]);
 
       setNewProfessionalName('');
-      setNewProfessionalRole('specialist');
+      setNewProfessionalRole(lastSelectedRole);
       setError('');
     } catch {
       setError('Failed to add professional');
@@ -67,7 +68,7 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
   const handleRemoveProfessional = async (id) => {
     try {
       setLoading(true);
-      await axios.delete(`/api/professionals/${id}`);
+      await api.delete(`/api/professionals/${id}`);
 
       setProfessionals(prev =>
         prev.filter(p => p.id !== id)
@@ -104,7 +105,11 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
           <select
             className="form-input"
             value={newProfessionalRole}
-            onChange={(e) => setNewProfessionalRole(e.target.value)}
+            onChange={(e) => {
+              setNewProfessionalRole(e.target.value),
+              setLastSelectedRole(e.target.value)
+            }
+          }
             disabled={loading}
           >
             <option value="specialist">Specialist</option>

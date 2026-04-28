@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axios';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 const UnavailabilitiesTab = ({
@@ -20,7 +20,7 @@ const UnavailabilitiesTab = ({
   const loadUnavailabilities = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/unavailabilities');
+      const response = await api.get('/api/unavailabilities');
       setUnavailabilities(response.data);
       setError('');
     } catch (err) {
@@ -39,21 +39,21 @@ const UnavailabilitiesTab = ({
       let newUnavailabilities = [];
 
       if (shiftType === 'all_day') {
-        const morningResponse = await axios.post('/api/unavailabilities', {
+        const morningResponse = await api.post('/api/unavailabilities', {
           professional_id: selectedProfessional,
           date,
           shift_type: 'morning',
         });
         newUnavailabilities.push(morningResponse.data);
 
-        const nightResponse = await axios.post('/api/unavailabilities', {
+        const nightResponse = await api.post('/api/unavailabilities', {
           professional_id: selectedProfessional,
           date,
           shift_type: 'night',
         });
         newUnavailabilities.push(nightResponse.data);
       } else {
-        const response = await axios.post('/api/unavailabilities', {
+        const response = await api.post('/api/unavailabilities', {
           professional_id: selectedProfessional,
           date,
           shift_type: shiftType,
@@ -72,7 +72,7 @@ const UnavailabilitiesTab = ({
   const handleRemoveUnavailability = async (id) => {
     try {
       setLoading(true);
-      await axios.delete(`/api/unavailabilities/${id}`);
+      await api.delete(`/api/unavailabilities/${id}`);
 
       setUnavailabilities(prev =>
         prev.filter(u => u.id !== id)
