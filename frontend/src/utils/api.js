@@ -53,6 +53,9 @@ export const errorMessage = (error, fallback) => {
   return fallback;
 };
 
+// Only a rejected token ends the session; outages keep it so the user can retry.
+export const sessionCheckFailure = (error) => (error?.response?.status === 401 ? 'signed-out' : 'retry');
+
 export const filenameFromDisposition = (header, fallback) => {
   const match = /filename="?([^";]+)"?/i.exec(header || '');
   return match ? match[1] : fallback;

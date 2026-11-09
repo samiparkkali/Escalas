@@ -16,9 +16,10 @@ export APP_ENV=development                      # allows the built-in dev SECRET
 .venv/bin/uvicorn app.main:app --reload --port 8000
 ```
 
-Tables are created on startup; `python -m app.cli init-db` creates them
-without starting the server. Without `DATABASE_URL` data is stored in
-`backend/escalas.db`.
+Tables are created on first startup; `python -m app.cli init-db` creates
+them without starting the server. There are no migrations yet: add Alembic
+before the first schema change. Without `DATABASE_URL` data is stored in
+`backend/escalas.db`. `create-user` needs only `DATABASE_URL`.
 
 ## Frontend
 
@@ -64,6 +65,18 @@ cd frontend && npm run lint && npm test && npm run build
 
 Backend tests use a temporary SQLite file per test. Set `TEST_DATABASE_URL`
 to run them against Postgres instead (its tables are dropped first).
+
+## CSV export
+
+The CSV is UTF-8 with a BOM and uses `;` as separator. It opens directly in
+Excel where the list separator is `;` (Portuguese and most European
+settings); elsewhere import it with Data > From Text and choose `;`.
+
+## Known limits
+
+- No rate limiting on login.
+- Logout only discards the token in the browser; a token stays valid until
+  it expires (`TOKEN_TTL_MINUTES`).
 
 ## Scheduling rules
 

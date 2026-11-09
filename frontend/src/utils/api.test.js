@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, filenameFromDisposition } from './api';
+import { errorMessage, filenameFromDisposition, sessionCheckFailure } from './api';
 
 describe('errorMessage', () => {
   it('uses the backend detail string', () => {
@@ -30,5 +30,13 @@ describe('filenameFromDisposition', () => {
       'escalas_2026-12-07_2026-12-20.csv',
     );
     expect(filenameFromDisposition(undefined, 'x.csv')).toBe('x.csv');
+  });
+});
+
+describe('sessionCheckFailure', () => {
+  it('signs out only when the server rejects the token', () => {
+    expect(sessionCheckFailure({ response: { status: 401 } })).toBe('signed-out');
+    expect(sessionCheckFailure({ response: { status: 503 } })).toBe('retry');
+    expect(sessionCheckFailure({ request: {} })).toBe('retry');
   });
 });

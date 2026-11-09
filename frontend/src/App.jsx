@@ -6,7 +6,7 @@ import UnavailabilitiesTab from './components/UnavailabilitiesTab';
 import ScheduleConfigTab from './components/ScheduleConfigTab';
 import ScheduleViewTab from './components/ScheduleViewTab';
 import StatisticsTab from './components/StatisticsTab';
-import api, { errorMessage, getToken, logout, onUnauthorized } from './utils/api';
+import api, { errorMessage, getToken, logout, onUnauthorized, sessionCheckFailure } from './utils/api';
 import { getNextMonthRange } from './utils/dateUtils';
 
 const TABS = [
@@ -44,6 +44,7 @@ function App() {
   const [schedule, setSchedule] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionError, setSessionError] = useState('');
 
   const signOut = useCallback(() => {
     logout();
@@ -56,12 +57,19 @@ function App() {
 
   useEffect(() => onUnauthorized(signOut), [signOut]);
 
-  useEffect(() => {
-    if (user !== undefined) return;
+  const checkSession = useCallback(() => {
+    setSessionError('');
     api.get('/api/auth/me')
       .then(({ data }) => setUser(data.username))
-      .catch(() => signOut());
-  }, [user, signOut]);
+      .catch((err) => {
+        if (sessionCheckFailure(err) === 'signed-out') signOut();
+        else setSessionError(errorMessage(err, 'Could not check your session'));
+      });
+  }, [signOut]);
+
+  useEffect(() => {
+    if (user === undefined) checkSession();
+  }, [user, checkSession]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -94,7 +102,17 @@ function App() {
   }, [user, loadData]);
 
   if (user === undefined) {
-    return <p className="empty-state-message centered">Loading…</p>;
+    return sessionError ? (
+      <div className="login-container">
+        <div className="alert error" role="alert">
+          {sessionError}{' '}
+          <button className="btn-link" onClick={checkSession}>Retry</button>{' '}
+          <button className="btn-link" onClick={signOut}>Sign in again</button>
+        </div>
+      </div>
+    ) : (
+      <p className="empty-state-message centered">Loading…</p>
+    );
   }
 
   if (user === null) {
