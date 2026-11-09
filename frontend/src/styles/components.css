@@ -59,10 +59,52 @@
   border: 1px solid #f5c2c0;
 }
 
+.alert.success {
+  background-color: var(--primary-teal-light);
+  color: var(--primary-teal-dark);
+  border: 1px solid #b8e3e6;
+}
+
+.alert.warning {
+  background-color: #fff6e5;
+  color: #8a5a00;
+  border: 1px solid #f5d999;
+}
+
 /* ========== FORMS ========== */
 
 .form-group {
   margin-bottom: 18px;
+}
+
+/* A row of fields that wraps on narrow screens. */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.form-row .btn-primary {
+  margin-top: 0;
+}
+
+.grow-1 {
+  flex: 1 1 160px;
+}
+
+.grow-2 {
+  flex: 2 1 220px;
+}
+
+.min-150 {
+  min-width: 150px;
 }
 
 .form-label {
@@ -124,11 +166,79 @@
   background-color: var(--secondary-orange-dark);
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary-teal);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.button-row .btn-secondary {
+  padding: 10px 16px;
+  font-size: 15px;
+}
+
+.button-row .btn-primary {
+  margin-top: 0;
+}
+
+.push-right {
+  margin-left: auto;
+}
+
 /* ========== HEADINGS (Component specific) ========== */
 h4 {
   font-size: 18px;
   margin-top: 24px; /* Default margin for h4 within components */
   color: var(--text-primary);
+}
+
+h4.danger {
+  color: #b42318;
+}
+
+h4.period {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.config-section {
+  margin-top: 24px;
+}
+
+.config-section h3 {
+  border-bottom: 1px solid var(--background-dark);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.strong {
+  font-weight: bold;
+}
+
+/* ========== LOGIN ========== */
+
+.login-container {
+  max-width: 420px;
+  margin: 10vh auto 0;
 }
 
 /* ========== MESSAGES ========== */
@@ -165,6 +275,18 @@ h4 {
   background-color: var(--background-light);
 }
 
+.table th.col-action {
+  width: 100px;
+}
+
+.table-danger th {
+  background-color: #b42318;
+}
+
+.table-danger tbody tr {
+  background-color: #fffbfa;
+}
+
 .table td[colspan] {
   text-align: center;
   color: var(--text-secondary);
@@ -178,9 +300,42 @@ h4 {
     padding: 18px;
   }
 
+  h1 {
+    font-size: 24px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  .tabs {
+    gap: 6px;
+  }
+
+  .tab-button {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
+  .form-row > .form-group,
+  .form-row > .btn-primary {
+    flex: 1 1 100%;
+  }
+
+  .button-row > button {
+    flex: 1 1 100%;
+  }
+
+  .push-right {
+    margin-left: 0;
+  }
+
   .table th,
   .table td {
     font-size: 14px;
     padding: 8px;
   }
+}
+.nowrap {
+  white-space: nowrap;
 }

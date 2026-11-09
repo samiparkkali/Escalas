@@ -1,13 +1,8 @@
-import React, { useState } from 'react';
-import api from '../utils/axios';
+import { useState } from 'react';
+import api, { downloadSchedule, errorMessage } from '../utils/api';
 import { formatDisplayDate, toIsoDate } from '../utils/dateUtils';
 
-const ScheduleViewTab = ({
-  config,
-  schedule,
-  setSchedule,
-  setStatistics,
-}) => {
+const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,7 +15,7 @@ const ScheduleViewTab = ({
         config: {
           start_date: toIsoDate(config.startDate),
           end_date: toIsoDate(config.endDate),
-          
+
           is_24h: is24hMode,
 
           morning_weekday_specialist: config.morningWeekdaySpecialist,
@@ -34,24 +29,21 @@ const ScheduleViewTab = ({
           night_weekend_intern: config.nightWeekendIntern,
         },
       });
-
       setSchedule(response.data);
-
-      const statsResponse = await api.get('/api/schedule/statistics');
-      setStatistics(statsResponse.data);
     } catch (err) {
-      setError(
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Failed to generate schedule'
-      );
+      setError(errorMessage(err, 'Failed to generate schedule'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExportSchedule = () => {
-    window.location.href = '/api/schedule/export';
+  const handleExportSchedule = async () => {
+    setError('');
+    try {
+      await downloadSchedule();
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to export schedule'));
+    }
   };
 
   return (
@@ -60,88 +52,89 @@ const ScheduleViewTab = ({
         <h2>Generate Schedule</h2>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+      <div className="button-row">
         <button className="btn-secondary" onClick={() => handleGenerateSchedule(false)} disabled={loading}>
           {loading ? 'Generating…' : 'Generate Standard Schedule'}
         </button>
-        
+
         <button className="btn-secondary" onClick={() => handleGenerateSchedule(true)} disabled={loading}>
           {loading ? 'Generating…' : 'Generate Schedule - 24h Format'}
         </button>
 
         {schedule && (
-          <button 
-            className="btn-primary" 
-            onClick={handleExportSchedule}
-            style={{ marginLeft: 'auto' }}
-          >
+          <button className="btn-primary push-right" onClick={handleExportSchedule} disabled={loading}>
             Export Schedule
           </button>
         )}
       </div>
 
-      {error && <div className="alert error" style={{ marginTop: '20px' }}>{error}</div>}
+      {error && <div className="alert error" role="alert">{error}</div>}
+
+      {!schedule && !error && (
+        <p className="empty-state-message">
+          No schedule yet. Set the period and staffing in Schedule Config, then generate.
+        </p>
+      )}
 
       {schedule && (
         <>
-          <h4>
-            Assignments ({schedule.assignments?.length || 0})
-          </h4>
-
-          <div className="table-container">
-            <table className="table">
-            <thead>
-              <tr>
-                <th>Professional</th>
-                <th>Role</th>
-                <th>Date</th>
-                <th>Shift</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedule.assignments?.map((a, i) => (
-                <tr key={i}>
-                  <td>{a.professional_name}</td>
-                  <td>{a.professional_role}</td>
-                  <td>{formatDisplayDate(a.shift_date)}</td>
-                  <td>{a.shift_type}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className={`alert ${schedule.success ? 'success' : 'warning'}`}>
+            {schedule.message} for {formatDisplayDate(schedule.start_date)} to{' '}
+            {formatDisplayDate(schedule.end_date)}
+            {schedule.is_24h ? ' (24h format)' : ''}.
           </div>
 
           {schedule.unassigned_shifts?.length > 0 && (
             <>
-              <h4>
-                Unassigned Shifts (
-                {schedule.unassigned_shifts.length})
-              </h4>
-
+              <h4 className="danger">Unassigned Shifts ({schedule.unassigned_shifts.length})</h4>
               <div className="table-container">
                 <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Shift</th>
-                    <th>Missing Specialists</th>
-                    <th>Missing Interns</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schedule.unassigned_shifts.map((s, i) => (
-                    <tr key={i}>
-                      <td>{formatDisplayDate(s.date)}</td>
-                      <td>{s.shift_type}</td>
-                      <td>{s.required_specialists}</td>
-                      <td>{s.required_interns}</td>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Shift</th>
+                      <th>Missing Specialists</th>
+                      <th>Missing Interns</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {schedule.unassigned_shifts.map((s) => (
+                      <tr key={`${s.date}-${s.shift_type}`}>
+                        <td className="nowrap">{formatDisplayDate(s.date)}</td>
+                        <td className="capitalize">{s.shift_type}</td>
+                        <td>{s.required_specialists}</td>
+                        <td>{s.required_interns}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
+
+          <h4>Assignments ({schedule.assignments?.length || 0})</h4>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Professional</th>
+                  <th>Role</th>
+                  <th>Date</th>
+                  <th>Shift</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedule.assignments?.map((a) => (
+                  <tr key={`${a.professional_id}-${a.shift_date}-${a.shift_type}`}>
+                    <td>{a.professional_name}</td>
+                    <td className="capitalize">{a.professional_role}</td>
+                    <td className="nowrap">{formatDisplayDate(a.shift_date)}</td>
+                    <td className="capitalize">{a.shift_type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

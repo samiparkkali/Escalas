@@ -1,80 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import api from '../utils/axios';
+import { useState } from 'react';
+import api, { errorMessage } from '../utils/api';
 
-const ProfessionalsTab = ({ professionals, setProfessionals }) => {
+const ProfessionalsTab = ({ professionals, setProfessionals, setUnavailabilities, loadingList }) => {
   const [newProfessionalName, setNewProfessionalName] = useState('');
   const [newProfessionalRole, setNewProfessionalRole] = useState('specialist');
-  const [lastSelectedRole, setLastSelectedRole] = useState('specialist');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadProfessionals();
-  }, []);
-
-  const loadProfessionals = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/professionals');
-
-      setProfessionals(
-        response.data.map(p => ({
-          id: p.id,
-          name: p.name,
-          role: p.role,
-          isActive: p.is_active,
-        }))
-      );
-
-      setError('');
-    } catch {
-      setError('Loading professionals not yet implemented. Please add professionals manually.');
-    } finally {
-      setLoading(false);
+  const handleAddProfessional = async (event) => {
+    event.preventDefault();
+    if (!newProfessionalName.trim()) {
+      setError('Enter a name.');
+      return;
     }
-  };
-
-  const handleAddProfessional = async () => {
-    if (!newProfessionalName.trim()) return;
 
     try {
       setLoading(true);
-
+      setError('');
       const response = await api.post('/api/professionals', {
         name: newProfessionalName.trim(),
         role: newProfessionalRole,
       });
-
-      setProfessionals(prev => [
-        ...prev,
-        {
-          id: response.data.id,
-          name: response.data.name,
-          role: response.data.role,
-          isActive: response.data.is_active,
-        },
-      ]);
-
+      setProfessionals((prev) => [...prev, response.data]);
+      // The role is kept so several people of the same role can be added in a row.
       setNewProfessionalName('');
-      setNewProfessionalRole(lastSelectedRole);
-      setError('');
-    } catch {
-      setError('Failed to add professional');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to add professional'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemoveProfessional = async (id) => {
+  const handleRemoveProfessional = async (professional) => {
+    if (!window.confirm(`Delete ${professional.name} and their unavailabilities?`)) return;
     try {
       setLoading(true);
-      await api.delete(`/api/professionals/${id}`);
-
-      setProfessionals(prev =>
-        prev.filter(p => p.id !== id)
-      );
-    } catch {
-      setError('Failed to remove professional');
+      setError('');
+      await api.delete(`/api/professionals/${professional.id}`);
+      setProfessionals((prev) => prev.filter((p) => p.id !== professional.id));
+      // The backend deletes the professional's unavailabilities too.
+      setUnavailabilities((prev) => prev.filter((u) => u.professional_id !== professional.id));
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to remove professional'));
     } finally {
       setLoading(false);
     }
@@ -86,30 +53,28 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
         <h2>Manage Professionals</h2>
       </div>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && <div className="alert error" role="alert">{error}</div>}
 
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '32px' }}>
-        <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
-          <label className="form-label">Name</label>
+      <form className="form-row" onSubmit={handleAddProfessional}>
+        <div className="form-group grow-2">
+          <label className="form-label" htmlFor="professional-name">Name</label>
           <input
+            id="professional-name"
             className="form-input"
-            placeholder="e.g. Dra. Maria Mateus"
+            placeholder="e.g. Dr. Jane Doe"
             value={newProfessionalName}
             onChange={(e) => setNewProfessionalName(e.target.value)}
             disabled={loading}
           />
         </div>
 
-        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-          <label className="form-label">Role</label>
+        <div className="form-group grow-1">
+          <label className="form-label" htmlFor="professional-role">Role</label>
           <select
+            id="professional-role"
             className="form-input"
             value={newProfessionalRole}
-            onChange={(e) => {
-              setNewProfessionalRole(e.target.value),
-              setLastSelectedRole(e.target.value)
-            }
-          }
+            onChange={(e) => setNewProfessionalRole(e.target.value)}
             disabled={loading}
           >
             <option value="specialist">Specialist</option>
@@ -117,10 +82,10 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
           </select>
         </div>
 
-        <button className="btn-primary" onClick={handleAddProfessional} disabled={loading}>
-          {loading ? 'Adding...' : 'Add Professional'}
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? 'Saving…' : 'Add Professional'}
         </button>
-      </div>
+      </form>
 
       <h4>Current Professionals ({professionals.length})</h4>
 
@@ -130,17 +95,18 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
             <tr>
               <th>Name</th>
               <th>Role</th>
-              <th style={{ width: '100px' }} />
+              <th className="col-action" />
             </tr>
           </thead>
           <tbody>
-            {professionals.map(p => (
+            {professionals.map((p) => (
               <tr key={p.id}>
                 <td>{p.name}</td>
-                <td>{p.role}</td>
+                <td className="capitalize">{p.role}</td>
                 <td>
-                  <button                    className="btn-secondary"
-                    onClick={() => handleRemoveProfessional(p.id)}
+                  <button
+                    className="btn-secondary"
+                    onClick={() => handleRemoveProfessional(p)}
                     disabled={loading}
                   >
                     Delete
@@ -149,9 +115,9 @@ const ProfessionalsTab = ({ professionals, setProfessionals }) => {
               </tr>
             ))}
 
-            {professionals.length === 0 && !loading && (
+            {professionals.length === 0 && (
               <tr className="empty-state-message">
-                <td colSpan="3">No professionals added yet</td>
+                <td colSpan="3">{loadingList ? 'Loading…' : 'No professionals added yet'}</td>
               </tr>
             )}
           </tbody>

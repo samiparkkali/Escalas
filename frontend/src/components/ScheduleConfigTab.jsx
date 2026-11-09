@@ -1,13 +1,43 @@
-import React from 'react';
 import { formatDisplayDate } from '../utils/dateUtils';
+
+const STAFFING_FIELDS = [
+  ['Morning Specialists', 'morning', 'Specialist'],
+  ['Morning Interns', 'morning', 'Intern'],
+  ['Night Specialists', 'night', 'Specialist'],
+  ['Night Interns', 'night', 'Intern'],
+];
 
 const ScheduleConfigTab = ({ config, setConfig }) => {
   const handleConfigChange = (field, value) => {
-    setConfig(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setConfig((prev) => ({ ...prev, [field]: value }));
   };
+
+  const invalidPeriod = config.startDate && config.endDate && config.endDate < config.startDate;
+
+  const staffingSection = (title, period) => (
+    <section className="config-section">
+      <h3>{title}</h3>
+      <div className="form-row">
+        {STAFFING_FIELDS.map(([label, shift, role]) => {
+          const field = `${shift}${period}${role}`;
+          return (
+            <div className="form-group grow-1 min-150" key={field}>
+              <label className="form-label" htmlFor={field}>{label}</label>
+              <input
+                id={field}
+                type="number"
+                min="0"
+                inputMode="numeric"
+                className="form-input"
+                value={config[field]}
+                onChange={(e) => handleConfigChange(field, Math.max(0, parseInt(e.target.value, 10) || 0))}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 
   return (
     <div className="tab-panel">
@@ -15,133 +45,43 @@ const ScheduleConfigTab = ({ config, setConfig }) => {
         <h2>Schedule Configuration</h2>
       </div>
 
-      {/* Date range */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap' }}>
-        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-          <label className="form-label">Start Date</label>
+      <div className="form-row">
+        <div className="form-group grow-1">
+          <label className="form-label" htmlFor="start-date">Start Date</label>
           <input
+            id="start-date"
             type="date"
             className="form-input"
             value={config.startDate || ''}
-            onChange={(e) =>
-              handleConfigChange('startDate', e.target.value)
-            }
+            onChange={(e) => handleConfigChange('startDate', e.target.value)}
           />
         </div>
 
-        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-          <label className="form-label">End Date</label>
+        <div className="form-group grow-1">
+          <label className="form-label" htmlFor="end-date">End Date</label>
           <input
+            id="end-date"
             type="date"
             className="form-input"
             value={config.endDate || ''}
-            onChange={(e) =>
-              handleConfigChange('endDate', e.target.value)
-            }
+            min={config.startDate || undefined}
+            onChange={(e) => handleConfigChange('endDate', e.target.value)}
           />
         </div>
       </div>
 
-      {/* Period display */}
-      {config.startDate && config.endDate && (
-        <h4 style={{ textAlign: 'left', marginTop: 0 }}>
+      {invalidPeriod && (
+        <div className="alert error" role="alert">The end date must be on or after the start date.</div>
+      )}
+
+      {config.startDate && config.endDate && !invalidPeriod && (
+        <h4 className="period">
           Selected Period: {formatDisplayDate(config.startDate)} to {formatDisplayDate(config.endDate)}
         </h4>
       )}
 
-      <div style={{ marginTop: '32px' }}>
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Weekday Staffing</h3>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px' }}>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Morning Specialists</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.morningWeekdaySpecialist}
-                onChange={(e) => handleConfigChange('morningWeekdaySpecialist', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Morning Interns</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.morningWeekdayIntern}
-                onChange={(e) => handleConfigChange('morningWeekdayIntern', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Night Specialists</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.nightWeekdaySpecialist}
-                onChange={(e) => handleConfigChange('nightWeekdaySpecialist', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Night Interns</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.nightWeekdayIntern}
-                onChange={(e) => handleConfigChange('nightWeekdayIntern', parseInt(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Weekend Staffing</h3>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px' }}>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Morning Specialists</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.morningWeekendSpecialist}
-                onChange={(e) => handleConfigChange('morningWeekendSpecialist', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Morning Interns</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.morningWeekendIntern}
-                onChange={(e) => handleConfigChange('morningWeekendIntern', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Night Specialists</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.nightWeekendSpecialist}
-                onChange={(e) => handleConfigChange('nightWeekendSpecialist', parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-              <label className="form-label">Night Interns</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input"
-                value={config.nightWeekendIntern}
-                onChange={(e) => handleConfigChange('nightWeekendIntern', parseInt(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      {staffingSection('Weekday Staffing', 'Weekday')}
+      {staffingSection('Weekend Staffing', 'Weekend')}
     </div>
   );
 };

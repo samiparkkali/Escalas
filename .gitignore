@@ -26,3 +26,11 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+.ruff_cache/
+
+# --- Local data ---
+*.db
+*.sqlite3
+
+# --- Git worktrees ---
+.worktrees/
