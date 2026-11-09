@@ -46,16 +46,6 @@ Sign in with the user created above.
 
 See `backend/.env.example` and `frontend/.env.example`.
 
-## Deploying (Render)
-
-- Backend web service: root `backend`, build `pip install -r requirements.txt`,
-  start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `SECRET_KEY`,
-  `DATABASE_URL` (from a Render Postgres database) and `FRONTEND_URL` (the
-  static site URL). Create the first user from the service shell:
-  `python -m app.cli create-user <name>`.
-- Frontend static site: root `frontend`, build `npm ci && npm run build`,
-  publish `dist`, set `VITE_API_URL` to the backend URL.
-
 ## Tests and lint
 
 ```bash
