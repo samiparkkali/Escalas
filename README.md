@@ -1,56 +1,70 @@
-# Shift Scheduler
+# Escalas — Shift Scheduler
 
-A full-stack application for generating and managing work schedules.
+Schedules specialists and interns into morning and night shifts. FastAPI +
+SQLAlchemy backend (`backend/`), React + Vite frontend (`frontend/`).
 
-## Architecture
+## Backend
 
-- **Backend**: Python FastAPI
-- **Frontend**: React with Material-UI
-- **Domain Logic**: Python classes for scheduling logic
-
-## Setup
-
-### Backend
+Requires Python 3.11+ (tested with 3.13).
 
 ```bash
 cd backend
-pip install -r requirements.txt
-python main.py
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt   # requirements.txt for runtime only
+export APP_ENV=development                      # allows the built-in dev SECRET_KEY
+.venv/bin/python -m app.cli create-user alice    # prompts for a password (min. 8 characters)
+.venv/bin/uvicorn app.main:app --reload --port 8000
 ```
 
-The backend will run on http://localhost:8000
+Tables are created on startup; `python -m app.cli init-db` creates them
+without starting the server. Without `DATABASE_URL` data is stored in
+`backend/escalas.db`.
 
-### Frontend
+## Frontend
+
+Requires Node 20.19+ (tested with 26).
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm ci
+npm run dev        # http://localhost:5173, proxies /api to localhost:8000
 ```
 
-The frontend will run on http://localhost:5173
+Sign in with the user created above.
 
-## Core Concepts
+## Environment variables
 
-The application is built around a few key ideas:
+| Variable | Where | Default | Purpose |
+|---|---|---|---|
+| `APP_ENV` | backend | `production` | `development` allows running without `SECRET_KEY` |
+| `SECRET_KEY` | backend | none (required outside development) | Signs login tokens, at least 32 characters |
+| `DATABASE_URL` | backend | `sqlite:///backend/escalas.db` | SQLAlchemy URL; `postgres://` and `postgresql://` both work |
+| `FRONTEND_URL` | backend | `http://localhost:5173` | Allowed browser origins (CORS), comma-separated |
+| `TOKEN_TTL_MINUTES` | backend | `720` | Login lifetime |
+| `VITE_API_URL` | frontend build | empty (same origin) | Backend URL when the frontend is served from another host |
 
-*   **Professionals**: The people who will be assigned to shifts.
-*   **Shifts**: Defined periods of work, categorized as 'morning' or 'night', with specific dates and staffing requirements.
-*   **Assignments**: The link between a professional and a specific shift.
+See `backend/.env.example` and `frontend/.env.example`.
 
-## Features
+## Deploying (Render)
 
-*   **Manage Professionals**: Add or remove professionals from the roster.
-*   **Set Unavailability**: Mark dates and shift types when a professional is unavailable to work.
-*   **Configure Schedule**:
-    *   Define the start and end dates for the schedule period.
-    *   Specify the number of staff required for morning and night shifts on both weekdays and weekends.
-*   **Generate & Download**: Automatically generate a schedule based on the provided constraints and download it as a CSV file.
-*   **View Statistics**: See a summary table of how many morning, night, and total shifts are assigned to each professional.
-*   **Track Assignments**: View lists of all assigned shifts and any shifts that could not be filled.
+- Backend web service: root `backend`, build `pip install -r requirements.txt`,
+  start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `SECRET_KEY`,
+  `DATABASE_URL` (from a Render Postgres database) and `FRONTEND_URL` (the
+  static site URL). Create the first user from the service shell:
+  `python -m app.cli create-user <name>`.
+- Frontend static site: root `frontend`, build `npm ci && npm run build`,
+  publish `dist`, set `VITE_API_URL` to the backend URL.
 
-## API Endpoints
+## Tests and lint
 
-- `POST /api/schedule/generate` - Generate a schedule
-- `GET /api/schedule/export` - Export schedule as CSV
-- `GET /api/schedule/statistics` - Get schedule statistics
+```bash
+cd backend && .venv/bin/python -m pytest && .venv/bin/ruff check .
+cd frontend && npm run lint && npm test && npm run build
+```
+
+Backend tests use a temporary SQLite file per test. Set `TEST_DATABASE_URL`
+to run them against Postgres instead (its tables are dropped first).
+
+## Scheduling rules
+
+Documented at the top of `backend/app/services.py`.
