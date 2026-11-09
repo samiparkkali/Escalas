@@ -25,7 +25,22 @@ body {
 }
 
 .app-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.user-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.centered {
+  text-align: center;
 }
 
 /* Headings */
