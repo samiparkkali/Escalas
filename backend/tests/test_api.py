@@ -79,7 +79,7 @@ def test_deleting_a_professional_removes_their_unavailabilities(client):
 
 
 def test_no_schedule_yet(client):
-    assert client.get("/api/schedule").status_code == 404
+    assert client.get("/api/schedule").json() is None
     assert client.get("/api/schedule/export").status_code == 404
     assert client.get("/api/schedule/statistics").json() == {
         "professional_stats": [],
@@ -187,7 +187,7 @@ def test_users_only_see_their_own_data(client, other_client):
 
     assert other_client.get("/api/professionals").json() == []
     assert other_client.get("/api/unavailabilities").json() == []
-    assert other_client.get("/api/schedule").status_code == 404
+    assert other_client.get("/api/schedule").json() is None
     assert other_client.get("/api/schedule/export").status_code == 404
     assert other_client.get("/api/schedule/statistics").json()["professional_stats"] == []
 
@@ -211,4 +211,4 @@ def test_users_only_see_their_own_data(client, other_client):
     assert {a["professional_name"] for a in result["assignments"]} == {"Dr. Test Other"}
 
     assert len(client.get("/api/professionals").json()) == 4
-    assert client.get("/api/schedule").status_code == 200
+    assert client.get("/api/schedule").json()["start_date"] == "2026-12-07"

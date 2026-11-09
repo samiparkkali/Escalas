@@ -40,7 +40,17 @@ def login(client: TestClient, username: str) -> None:
 
 @pytest.fixture
 def database_url(tmp_path):
-    return f"sqlite:///{tmp_path / 'test.db'}"
+    """A fresh SQLite file per test, or TEST_DATABASE_URL (e.g. Postgres) emptied first."""
+    url = os.getenv("TEST_DATABASE_URL")
+    if not url:
+        return f"sqlite:///{tmp_path / 'test.db'}"
+    from app import orm  # noqa: F401
+    from app.db import Base
+
+    engine = make_engine(url)
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+    return url
 
 
 @pytest.fixture

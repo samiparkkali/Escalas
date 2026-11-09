@@ -208,9 +208,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         )
         return _schedule_response(schedule)
 
-    @app.get("/api/schedule", response_model=ScheduleResponse)
+    @app.get("/api/schedule", response_model=Optional[ScheduleResponse])
     def latest_schedule(schedules: ScheduleRepository = Depends(get_schedules)):
-        return _schedule_response(_latest_or_404(schedules))
+        """The latest schedule, or null when none has been generated."""
+        schedule = schedules.get_latest()
+        return _schedule_response(schedule) if schedule else None
 
     @app.get("/api/schedule/export")
     def export_schedule(schedules: ScheduleRepository = Depends(get_schedules)):

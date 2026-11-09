@@ -2,12 +2,15 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
+from .config import normalize_database_url
+
 
 class Base(DeclarativeBase):
     pass
 
 
 def make_engine(database_url: str) -> Engine:
+    database_url = normalize_database_url(database_url)
     if database_url.startswith("sqlite"):
         engine = create_engine(database_url, connect_args={"check_same_thread": False})
 
