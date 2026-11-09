@@ -1,8 +1,8 @@
 from collections import Counter
 from datetime import date, timedelta
 
-from app.schemas import Role, ScheduleConfigModel, ShiftType
-from app.services import Candidate, build_shifts, generate_schedule
+from app.schemas import AssignmentResponse, Role, ScheduleConfigModel, ShiftType
+from app.services import Candidate, build_shifts, export_csv, generate_schedule
 
 ZERO = {
     f"{s}_{d}_{r}": 0
@@ -159,3 +159,20 @@ def test_24h_mode_staffs_by_the_larger_requirement():
     result = generate_schedule(cfg, people(3), set())
     assert len(result.assignments) == 4
     assert result.unassigned_shifts == []
+
+
+def test_csv_neutralises_tab_and_carriage_return_prefixes():
+    assignments = [
+        AssignmentResponse(
+            professional_id=str(i),
+            professional_name=name,
+            professional_role=Role.specialist,
+            shift_date=date(2026, 12, 7),
+            shift_type=ShiftType.morning,
+        )
+        for i, name in enumerate(["\tDr. Tab", "\rDr. Return", "Dr. Plain"])
+    ]
+    text = export_csv(date(2026, 12, 7), date(2026, 12, 7), assignments)
+    assert "'\tDr. Tab;X;" in text
+    assert "'\rDr. Return" in text
+    assert "\nDr. Plain;X;" in text

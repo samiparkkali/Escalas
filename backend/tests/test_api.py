@@ -153,6 +153,19 @@ def test_csv_export_grid(client):
     assert rows[2:] == [["Dr. Zé Teste", "X", "", "X", ""], ["Dra. Íris Teste", "X", "", "X", ""]]
 
 
+def test_csv_neutralises_spreadsheet_formulas(client):
+    for name in ("=HYPERLINK(1)", "+Dr. Plus", "-Dr. Minus", "@Dr. At"):
+        add(client, name)
+    config = {**CONFIG, "end_date": "2026-12-07", "morning_weekday_specialist": 4}
+    client.post("/api/schedule/generate", json={"config": config})
+
+    rows = list(
+        csv.reader(io.StringIO(client.get("/api/schedule/export").content.decode("utf-8-sig")), delimiter=";")
+    )
+    names = sorted(row[0] for row in rows[2:])
+    assert names == sorted(["'=HYPERLINK(1)", "'+Dr. Plus", "'-Dr. Minus", "'@Dr. At"])
+
+
 def test_only_the_latest_schedule_is_kept(client):
     roster(client)
     client.post("/api/schedule/generate", json={"config": CONFIG})

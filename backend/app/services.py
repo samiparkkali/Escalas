@@ -230,6 +230,14 @@ def _roster_order(item) -> tuple:
     return (0 if item.role == Role.specialist else 1, item.name.casefold())
 
 
+FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _safe_cell(value: str) -> str:
+    # A leading quote stops spreadsheets from evaluating the cell as a formula.
+    return f"'{value}" if value.startswith(FORMULA_PREFIXES) else value
+
+
 def export_csv(start_date: date, end_date: date, assignments: List[AssignmentResponse]) -> str:
     """Semicolon-separated grid: one row per professional, a Morning and a Night
     column per day of the period, "X" where the professional works."""
@@ -259,7 +267,7 @@ def export_csv(start_date: date, end_date: date, assignments: List[AssignmentRes
     )
     for person in ordered:
         slots = worked[person.professional_id]
-        row = [person.professional_name]
+        row = [_safe_cell(person.professional_name)]
         for day in days:
             row.append("X" if (day, ShiftType.morning) in slots else "")
             row.append("X" if (day, ShiftType.night) in slots else "")
