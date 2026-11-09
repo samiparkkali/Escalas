@@ -32,7 +32,7 @@ def test_api_routes_require_a_token(anonymous, method, path):
     assert getattr(anonymous, method)(path).status_code == 401
 
 
-@pytest.mark.parametrize("method,path", PROTECTED[:2])
+@pytest.mark.parametrize("method,path", PROTECTED)
 def test_api_routes_reject_a_forged_token(anonymous, method, path):
     forged = jwt.encode(
         {"sub": "someone", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
@@ -43,17 +43,55 @@ def test_api_routes_reject_a_forged_token(anonymous, method, path):
     assert response.status_code == 401
 
 
+def _login_user_id(client, database_url):
+    add_user(database_url, "scheduler.one")
+    login = client.post("/api/auth/login", json={"username": "scheduler.one", "password": PASSWORD})
+    return jwt.decode(login.json()["access_token"], options={"verify_signature": False})["sub"]
+
+
+def _me(client, token):
+    return client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+
 def test_expired_token_is_rejected(anonymous, database_url):
+    user_id = _login_user_id(anonymous, database_url)
+    secret = anonymous.app.state.settings.secret_key
+    now = datetime.now(timezone.utc)
+    expired = jwt.encode({"sub": user_id, "exp": now - timedelta(minutes=1)}, secret, algorithm="HS256")
+    current = jwt.encode({"sub": user_id, "exp": now + timedelta(minutes=1)}, secret, algorithm="HS256")
+    assert _me(anonymous, expired).status_code == 401
+    assert _me(anonymous, current).status_code == 200
+
+
+@pytest.mark.filterwarnings("ignore:The HMAC key")
+def test_token_signed_with_another_algorithm_is_rejected(anonymous, database_url):
+    user_id = _login_user_id(anonymous, database_url)
+    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    hs512 = jwt.encode(payload, anonymous.app.state.settings.secret_key, algorithm="HS512")
+    assert _me(anonymous, hs512).status_code == 401
+
+
+def test_unsigned_token_is_rejected(anonymous, database_url):
+    user_id = _login_user_id(anonymous, database_url)
+    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    unsigned = jwt.encode(payload, None, algorithm="none")
+    assert _me(anonymous, unsigned).status_code == 401
+
+
+def test_token_of_a_deleted_user_is_rejected(anonymous, database_url):
     add_user(database_url, "scheduler.one")
     login = anonymous.post("/api/auth/login", json={"username": "scheduler.one", "password": PASSWORD})
-    user_id = jwt.decode(login.json()["access_token"], options={"verify_signature": False})["sub"]
-    expired = jwt.encode(
-        {"sub": user_id, "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
-        anonymous.app.state.settings.secret_key,
-        algorithm="HS256",
-    )
-    response = anonymous.get("/api/auth/me", headers={"Authorization": f"Bearer {expired}"})
-    assert response.status_code == 401
+    token = login.json()["access_token"]
+    assert _me(anonymous, token).status_code == 200
+    from sqlalchemy import text
+
+    from app.db import make_engine
+
+    engine = make_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(text("delete from users"))
+    engine.dispose()
+    assert _me(anonymous, token).status_code == 401
 
 
 def test_health_is_public(anonymous):
@@ -91,9 +129,24 @@ def test_production_refuses_to_start_without_secret_key(monkeypatch):
         load_settings()
 
 
+def test_test_environment_does_not_fall_back_to_the_development_key(monkeypatch):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.setenv("APP_ENV", "test")
+    with pytest.raises(RuntimeError, match="SECRET_KEY"):
+        load_settings()
+
+
 def test_short_secret_key_is_refused(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "too-short")
     with pytest.raises(RuntimeError, match="at least"):
+        load_settings()
+
+
+@pytest.mark.parametrize("placeholder", ["change-me-to-a-long-random-string", DEV_SECRET_KEY])
+def test_known_placeholder_secret_keys_are_refused(monkeypatch, placeholder):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", placeholder)
+    with pytest.raises(RuntimeError, match="placeholder"):
         load_settings()
 
 
@@ -118,7 +171,9 @@ def test_legacy_postgres_scheme_is_normalized():
 
 
 def test_cli_creates_a_user_who_can_log_in(monkeypatch, database_url, capsys):
-    monkeypatch.setenv("APP_ENV", "test")
+    # Creating a user needs only the database, not the signing key.
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setattr("sys.stdin", io.StringIO("a-new-password\n"))
     assert cli.main(["create-user", "first.user", "--password-stdin"]) == 0

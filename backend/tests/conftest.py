@@ -1,6 +1,7 @@
 import os
 
 os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-123")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

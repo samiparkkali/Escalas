@@ -9,7 +9,7 @@ import argparse
 import getpass
 import sys
 
-from .config import load_settings
+from .config import database_url_from_env
 from .db import create_tables, make_engine, make_sessionmaker
 from .repositories import UserRepository
 from .security import hash_password
@@ -33,7 +33,7 @@ def main(argv=None) -> int:
     create.add_argument("--password-stdin", action="store_true", help="read the password from stdin")
     args = parser.parse_args(argv)
 
-    engine = make_engine(load_settings().database_url)
+    engine = make_engine(database_url_from_env())
     create_tables(engine)
     if args.command == "init-db":
         print("Tables are ready.")
