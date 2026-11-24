@@ -1,20 +1,20 @@
 :root {
   /* Colors */
-  --primary-teal: #007d8a;        /* Deep teal */
-  --primary-teal-dark: #005e66;   /* Darker deep teal */
-  --primary-teal-light: #e4f5f6;  /* Very light teal tint */
+  --primary-teal: #007d8a;
+  --primary-teal-dark: #005e66;
+  --primary-teal-light: #e4f5f6;
 
-  --secondary-orange: #f9b233;     /* Warm accent orange */
-  --secondary-orange-dark: #d9982b; /* Darker accent */
+  --secondary-orange: #f9b233;
+  --secondary-orange-dark: #d9982b;
 
-  --background-light: #f6fbfb;    /* Clean, cool background */
-  --background-dark: #e0eeee;     /* Subtle contrast background */
+  --background-light: #f6fbfb;
+  --background-dark: #e0eeee;
 
-  --text-primary: #123a3f;        /* Dark blue‑teal for readability */
-  --text-secondary: #4f7f84;      /* Muted teal text */
+  --text-primary: #123a3f;
+  --text-secondary: #4f7f84;
 
   /* UI */
   --border-radius: 10px;
-  --shadow: 0 10px 30px rgba(0, 125, 138, 0.15); /* Teal‑tinted shadow */
+  --shadow: 0 10px 30px rgba(0, 125, 138, 0.15);
   --transition: all 0.2s ease;
 }

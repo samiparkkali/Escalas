@@ -1,7 +1,9 @@
-"""Regression tests for defects found on main; each failed before its fix."""
+"""Regression tests for defects found on main."""
 
 import csv
 import io
+
+from .conftest import add
 
 CONFIG = {
     "start_date": "2026-12-01",
@@ -15,12 +17,6 @@ CONFIG = {
     "morning_weekend_intern": 0,
     "night_weekend_intern": 0,
 }
-
-
-def add(client, name, role="specialist"):
-    response = client.post("/api/professionals", json={"name": name, "role": role})
-    assert response.status_code == 200, response.text
-    return response.json()["id"]
 
 
 def generate(client, **overrides):

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatDisplayDate, getNextMonthRange, toIsoDate } from './dateUtils';
+import { formatDisplayDate, formatIsoDate, getNextMonthRange } from './dateUtils';
 
 describe('dateUtils', () => {
   afterEach(() => vi.useRealTimers());
@@ -9,11 +9,8 @@ describe('dateUtils', () => {
     expect(formatDisplayDate('')).toBe('');
   });
 
-  it('converts dates and display strings to ISO', () => {
-    expect(toIsoDate(new Date(2026, 0, 5))).toBe('2026-01-05');
-    expect(toIsoDate('05-01-2026')).toBe('2026-01-05');
-    expect(toIsoDate('2026-01-05')).toBe('2026-01-05');
-    expect(toIsoDate(null)).toBeNull();
+  it('formats a date as ISO from its local calendar day', () => {
+    expect(formatIsoDate(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 
   it('defaults to the whole of next month, across a year end', () => {

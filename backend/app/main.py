@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,18 +31,18 @@ from .schemas import (
     LoginRequest,
     ProfessionalModel,
     Role,
+    ScheduleConfigModel,
     ScheduleResponse,
     ShiftType,
     TokenResponse,
     UnassignedShiftResponse,
     UnavailabilityModel,
-    UpdateProfessionalRequest,
     UserResponse,
 )
 from .security import create_access_token, verify_password
 
 
-def _assignments(schedule: Schedule) -> List[AssignmentResponse]:
+def _assignments(schedule: Schedule) -> list[AssignmentResponse]:
     return [
         AssignmentResponse(
             professional_id=a.professional_id,
@@ -56,7 +55,7 @@ def _assignments(schedule: Schedule) -> List[AssignmentResponse]:
     ]
 
 
-def _unfilled(schedule: Schedule) -> List[UnassignedShiftResponse]:
+def _unfilled(schedule: Schedule) -> list[UnassignedShiftResponse]:
     return [
         UnassignedShiftResponse(
             date=u.date,
@@ -74,6 +73,7 @@ def _schedule_response(schedule: Schedule) -> ScheduleResponse:
         start_date=schedule.start_date,
         end_date=schedule.end_date,
         is_24h=schedule.is_24h,
+        config=ScheduleConfigModel(**schedule.config),
         assignments=_assignments(schedule),
         unassigned_shifts=unfilled,
         success=not unfilled,
@@ -81,14 +81,7 @@ def _schedule_response(schedule: Schedule) -> ScheduleResponse:
     )
 
 
-def _latest_or_404(schedules: ScheduleRepository) -> Schedule:
-    schedule = schedules.get_latest()
-    if schedule is None:
-        raise HTTPException(status_code=404, detail="No schedule generated yet")
-    return schedule
-
-
-def create_app(settings: Optional[Settings] = None) -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     engine = make_engine(settings.database_url)
 
@@ -111,10 +104,6 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         expose_headers=["Content-Disposition"],
     )
 
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
-
     # Auth
 
     @app.post("/api/auth/login", response_model=TokenResponse)
@@ -135,27 +124,16 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     # Professionals
 
-    @app.get("/api/professionals", response_model=List[ProfessionalModel])
+    @app.get("/api/professionals", response_model=list[ProfessionalModel])
     def list_professionals(repo: ProfessionalRepository = Depends(get_professionals)):
         return repo.get_all()
 
-    @app.post("/api/professionals", response_model=ProfessionalModel, status_code=200)
+    @app.post("/api/professionals", response_model=ProfessionalModel)
     def create_professional(
         request: CreateProfessionalRequest,
         repo: ProfessionalRepository = Depends(get_professionals),
     ):
         return repo.create(request.name, request.role)
-
-    @app.put("/api/professionals/{professional_id}", response_model=ProfessionalModel)
-    def update_professional(
-        professional_id: str,
-        request: UpdateProfessionalRequest,
-        repo: ProfessionalRepository = Depends(get_professionals),
-    ):
-        professional = repo.update(professional_id, request.name, request.role, request.is_active)
-        if not professional:
-            raise HTTPException(status_code=404, detail="Professional not found")
-        return professional
 
     @app.delete("/api/professionals/{professional_id}")
     def delete_professional(professional_id: str, repo: ProfessionalRepository = Depends(get_professionals)):
@@ -165,7 +143,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     # Unavailabilities
 
-    @app.get("/api/unavailabilities", response_model=List[UnavailabilityModel])
+    @app.get("/api/unavailabilities", response_model=list[UnavailabilityModel])
     def list_unavailabilities(repo: UnavailabilityRepository = Depends(get_unavailabilities)):
         return repo.get_all()
 
@@ -200,7 +178,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         schedules: ScheduleRepository = Depends(get_schedules),
     ):
         candidates = [
-            services.Candidate(id=p.id, name=p.name, role=Role(p.role)) for p in professionals.get_active()
+            services.Candidate(id=p.id, name=p.name, role=Role(p.role)) for p in professionals.get_all()
         ]
         result = services.generate_schedule(request.config, candidates, unavailabilities.unavailable_slots())
         schedule = schedules.replace(
@@ -208,7 +186,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         )
         return _schedule_response(schedule)
 
-    @app.get("/api/schedule", response_model=Optional[ScheduleResponse])
+    @app.get("/api/schedule", response_model=ScheduleResponse | None)
     def latest_schedule(schedules: ScheduleRepository = Depends(get_schedules)):
         """The latest schedule, or null when none has been generated."""
         schedule = schedules.get_latest()
@@ -216,7 +194,9 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @app.get("/api/schedule/export")
     def export_schedule(schedules: ScheduleRepository = Depends(get_schedules)):
-        schedule = _latest_or_404(schedules)
+        schedule = schedules.get_latest()
+        if schedule is None:
+            raise HTTPException(status_code=404, detail="No schedule generated yet")
         content = services.export_csv(schedule.start_date, schedule.end_date, _assignments(schedule))
         filename = f"escalas_{schedule.start_date:%Y-%m-%d}_{schedule.end_date:%Y-%m-%d}.csv"
         # The UTF-8 BOM makes Excel read accented names correctly.

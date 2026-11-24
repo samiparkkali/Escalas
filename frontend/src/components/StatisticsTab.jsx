@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api, { errorMessage } from '../utils/api';
-import { formatDisplayDate } from '../utils/dateUtils';
+import UnassignedShiftsTable from './UnassignedShiftsTable';
 
 const StatisticsTab = () => {
   const [statistics, setStatistics] = useState(null);
@@ -78,31 +78,7 @@ const StatisticsTab = () => {
           )}
 
           {unassignedShifts.length > 0 && (
-            <>
-              <h4 className="danger">Missing (Unassigned) Shifts</h4>
-              <div className="table-container">
-                <table className="table table-danger">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Shift</th>
-                      <th>Missing Specialists</th>
-                      <th>Missing Interns</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unassignedShifts.map((s) => (
-                      <tr key={`${s.date}-${s.shift_type}`}>
-                        <td className="nowrap">{formatDisplayDate(s.date)}</td>
-                        <td className="capitalize">{s.shift_type}</td>
-                        <td className={s.required_specialists > 0 ? 'strong' : ''}>{s.required_specialists}</td>
-                        <td className={s.required_interns > 0 ? 'strong' : ''}>{s.required_interns}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            <UnassignedShiftsTable title="Missing (Unassigned) Shifts" shifts={unassignedShifts} />
           )}
         </>
       ) : (

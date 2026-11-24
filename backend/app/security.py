@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -26,7 +25,7 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode()
 
 
-def verify_password(password: str, password_hash: Optional[str]) -> bool:
+def verify_password(password: str, password_hash: str | None) -> bool:
     encoded = password.encode("utf-8")
     if password_hash is None or len(encoded) > MAX_PASSWORD_BYTES:
         bcrypt.checkpw(b"x", _DUMMY_HASH.encode())
@@ -35,12 +34,12 @@ def verify_password(password: str, password_hash: Optional[str]) -> bool:
 
 
 def create_access_token(user_id: str, secret_key: str, ttl_minutes: int) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {"sub": user_id, "iat": now, "exp": now + timedelta(minutes=ttl_minutes)}
     return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str, secret_key: str) -> Optional[str]:
+def decode_access_token(token: str, secret_key: str) -> str | None:
     """Returns the user id, or None when the token is invalid or expired."""
     try:
         payload = jwt.decode(token, secret_key, algorithms=[ALGORITHM], options={"require": ["sub", "exp"]})

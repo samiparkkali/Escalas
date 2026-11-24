@@ -1,9 +1,10 @@
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from app import cli
 from app.config import DEV_SECRET_KEY, load_settings, normalize_database_url
@@ -18,7 +19,6 @@ PROTECTED = [
     ("get", "/api/auth/me"),
     ("get", "/api/professionals"),
     ("post", "/api/professionals"),
-    ("put", "/api/professionals/x"),
     ("delete", "/api/professionals/x"),
     ("get", "/api/unavailabilities"),
     ("post", "/api/unavailabilities"),
@@ -38,7 +38,7 @@ def test_api_routes_require_a_token(anonymous, method, path):
 @pytest.mark.parametrize("method,path", PROTECTED)
 def test_api_routes_reject_a_forged_token(anonymous, method, path):
     forged = jwt.encode(
-        {"sub": "someone", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        {"sub": "someone", "exp": datetime.now(UTC) + timedelta(hours=1)},
         "a-different-secret-key-of-enough-length",
         algorithm="HS256",
     )
@@ -59,7 +59,7 @@ def _me(client, token):
 def test_expired_token_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
     secret = anonymous.app.state.settings.secret_key
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expired = jwt.encode({"sub": user_id, "exp": now - timedelta(minutes=1)}, secret, algorithm="HS256")
     current = jwt.encode({"sub": user_id, "exp": now + timedelta(minutes=1)}, secret, algorithm="HS256")
     assert _me(anonymous, expired).status_code == 401
@@ -69,14 +69,14 @@ def test_expired_token_is_rejected(anonymous, database_url):
 @pytest.mark.filterwarnings("ignore:The HMAC key")
 def test_token_signed_with_another_algorithm_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    payload = {"sub": user_id, "exp": datetime.now(UTC) + timedelta(minutes=5)}
     hs512 = jwt.encode(payload, anonymous.app.state.settings.secret_key, algorithm="HS512")
     assert _me(anonymous, hs512).status_code == 401
 
 
 def test_unsigned_token_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    payload = {"sub": user_id, "exp": datetime.now(UTC) + timedelta(minutes=5)}
     unsigned = jwt.encode(payload, None, algorithm="none")
     assert _me(anonymous, unsigned).status_code == 401
 
@@ -86,10 +86,6 @@ def test_token_of_a_deleted_user_is_rejected(anonymous, database_url):
     login = anonymous.post("/api/auth/login", json={"username": "scheduler.one", "password": PASSWORD})
     token = login.json()["access_token"]
     assert _me(anonymous, token).status_code == 200
-    from sqlalchemy import text
-
-    from app.db import make_engine
-
     engine = make_engine(database_url)
     with engine.begin() as conn:
         conn.execute(text("delete from users"))
@@ -97,11 +93,7 @@ def test_token_of_a_deleted_user_is_rejected(anonymous, database_url):
     assert _me(anonymous, token).status_code == 401
 
 
-def test_health_is_public(anonymous):
-    assert anonymous.get("/health").json() == {"status": "ok"}
-
-
-def test_login_returns_a_token_for_the_user(client):
+def test_logged_in_user_is_reported_by_me(client):
     assert client.get("/api/auth/me").json() == {"username": "scheduler.one"}
 
 
@@ -134,10 +126,6 @@ def test_login_rejects_a_password_over_72_bytes(anonymous, database_url):
 
 def test_passwords_are_stored_hashed(database_url):
     add_user(database_url, "scheduler.one")
-    from sqlalchemy import text
-
-    from app.db import make_engine
-
     with make_engine(database_url).connect() as conn:
         stored = conn.execute(text("select password_hash from users")).scalar_one()
     assert PASSWORD not in stored

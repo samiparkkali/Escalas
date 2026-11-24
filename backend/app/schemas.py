@@ -1,6 +1,6 @@
 from datetime import date
-from enum import Enum
-from typing import Annotated, List, Optional
+from enum import StrEnum
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -9,12 +9,12 @@ MAX_PERIOD_DAYS = 366
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     specialist = "specialist"
     intern = "intern"
 
 
-class ShiftType(str, Enum):
+class ShiftType(StrEnum):
     morning = "morning"
     night = "night"
 
@@ -40,18 +40,11 @@ class ProfessionalModel(BaseModel):
     id: str
     name: str
     role: Role
-    is_active: bool = True
 
 
 class CreateProfessionalRequest(BaseModel):
     name: Name
     role: Role
-
-
-class UpdateProfessionalRequest(BaseModel):
-    name: Name
-    role: Role
-    is_active: Optional[bool] = None
 
 
 class UnavailabilityModel(BaseModel):
@@ -117,8 +110,9 @@ class ScheduleResponse(BaseModel):
     start_date: date
     end_date: date
     is_24h: bool
-    assignments: List[AssignmentResponse]
-    unassigned_shifts: List[UnassignedShiftResponse]
+    config: ScheduleConfigModel
+    assignments: list[AssignmentResponse]
+    unassigned_shifts: list[UnassignedShiftResponse]
     success: bool
     message: str
 
@@ -135,5 +129,5 @@ class StatisticsResponse(BaseModel):
 
 
 class FullStatisticsResponse(BaseModel):
-    professional_stats: List[StatisticsResponse]
-    unassigned_shifts: List[UnassignedShiftResponse]
+    professional_stats: list[StatisticsResponse]
+    unassigned_shifts: list[UnassignedShiftResponse]

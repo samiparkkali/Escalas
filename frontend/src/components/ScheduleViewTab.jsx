@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api, { downloadSchedule, errorMessage } from '../utils/api';
-import { formatDisplayDate, toIsoDate } from '../utils/dateUtils';
+import { formatDisplayDate } from '../utils/dateUtils';
+import UnassignedShiftsTable from './UnassignedShiftsTable';
 
 const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
   const [loading, setLoading] = useState(false);
@@ -12,22 +13,7 @@ const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
 
     try {
       const response = await api.post('/api/schedule/generate', {
-        config: {
-          start_date: toIsoDate(config.startDate),
-          end_date: toIsoDate(config.endDate),
-
-          is_24h: is24hMode,
-
-          morning_weekday_specialist: config.morningWeekdaySpecialist,
-          night_weekday_specialist: config.nightWeekdaySpecialist,
-          morning_weekend_specialist: config.morningWeekendSpecialist,
-          night_weekend_specialist: config.nightWeekendSpecialist,
-
-          morning_weekday_intern: config.morningWeekdayIntern,
-          night_weekday_intern: config.nightWeekdayIntern,
-          morning_weekend_intern: config.morningWeekendIntern,
-          night_weekend_intern: config.nightWeekendIntern,
-        },
+        config: { ...config, is_24h: is24hMode },
       });
       setSchedule(response.data);
     } catch (err) {
@@ -85,31 +71,10 @@ const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
           </div>
 
           {schedule.unassigned_shifts?.length > 0 && (
-            <>
-              <h4 className="danger">Unassigned Shifts ({schedule.unassigned_shifts.length})</h4>
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Shift</th>
-                      <th>Missing Specialists</th>
-                      <th>Missing Interns</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedule.unassigned_shifts.map((s) => (
-                      <tr key={`${s.date}-${s.shift_type}`}>
-                        <td className="nowrap">{formatDisplayDate(s.date)}</td>
-                        <td className="capitalize">{s.shift_type}</td>
-                        <td>{s.required_specialists}</td>
-                        <td>{s.required_interns}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            <UnassignedShiftsTable
+              title={`Unassigned Shifts (${schedule.unassigned_shifts.length})`}
+              shifts={schedule.unassigned_shifts}
+            />
           )}
 
           <h4>Assignments ({schedule.assignments?.length || 0})</h4>

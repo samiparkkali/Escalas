@@ -11,6 +11,6 @@ line-length = 110
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B"]
+select = ["E", "F", "W", "I", "B", "UP"]
 # FastAPI declares dependencies with Depends() in argument defaults.
 ignore = ["B008"]

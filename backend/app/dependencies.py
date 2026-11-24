@@ -1,4 +1,4 @@
-from typing import Iterator
+from collections.abc import Iterator
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

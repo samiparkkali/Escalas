@@ -1,10 +1,10 @@
 import { formatDisplayDate } from '../utils/dateUtils';
 
 const STAFFING_FIELDS = [
-  ['Morning Specialists', 'morning', 'Specialist'],
-  ['Morning Interns', 'morning', 'Intern'],
-  ['Night Specialists', 'night', 'Specialist'],
-  ['Night Interns', 'night', 'Intern'],
+  ['Morning Specialists', 'morning', 'specialist'],
+  ['Morning Interns', 'morning', 'intern'],
+  ['Night Specialists', 'night', 'specialist'],
+  ['Night Interns', 'night', 'intern'],
 ];
 
 const ScheduleConfigTab = ({ config, setConfig }) => {
@@ -12,14 +12,14 @@ const ScheduleConfigTab = ({ config, setConfig }) => {
     setConfig((prev) => ({ ...prev, [field]: value }));
   };
 
-  const invalidPeriod = config.startDate && config.endDate && config.endDate < config.startDate;
+  const invalidPeriod = config.start_date && config.end_date && config.end_date < config.start_date;
 
   const staffingSection = (title, period) => (
     <section className="config-section">
       <h3>{title}</h3>
       <div className="form-row">
         {STAFFING_FIELDS.map(([label, shift, role]) => {
-          const field = `${shift}${period}${role}`;
+          const field = `${shift}_${period}_${role}`;
           return (
             <div className="form-group grow-1 min-150" key={field}>
               <label className="form-label" htmlFor={field}>{label}</label>
@@ -52,8 +52,8 @@ const ScheduleConfigTab = ({ config, setConfig }) => {
             id="start-date"
             type="date"
             className="form-input"
-            value={config.startDate || ''}
-            onChange={(e) => handleConfigChange('startDate', e.target.value)}
+            value={config.start_date || ''}
+            onChange={(e) => handleConfigChange('start_date', e.target.value)}
           />
         </div>
 
@@ -63,9 +63,9 @@ const ScheduleConfigTab = ({ config, setConfig }) => {
             id="end-date"
             type="date"
             className="form-input"
-            value={config.endDate || ''}
-            min={config.startDate || undefined}
-            onChange={(e) => handleConfigChange('endDate', e.target.value)}
+            value={config.end_date || ''}
+            min={config.start_date || undefined}
+            onChange={(e) => handleConfigChange('end_date', e.target.value)}
           />
         </div>
       </div>
@@ -74,14 +74,14 @@ const ScheduleConfigTab = ({ config, setConfig }) => {
         <div className="alert error" role="alert">The end date must be on or after the start date.</div>
       )}
 
-      {config.startDate && config.endDate && !invalidPeriod && (
+      {config.start_date && config.end_date && !invalidPeriod && (
         <h4 className="period">
-          Selected Period: {formatDisplayDate(config.startDate)} to {formatDisplayDate(config.endDate)}
+          Selected Period: {formatDisplayDate(config.start_date)} to {formatDisplayDate(config.end_date)}
         </h4>
       )}
 
-      {staffingSection('Weekday Staffing', 'Weekday')}
-      {staffingSection('Weekend Staffing', 'Weekend')}
+      {staffingSection('Weekday Staffing', 'weekday')}
+      {staffingSection('Weekend Staffing', 'weekend')}
     </div>
   );
 };
