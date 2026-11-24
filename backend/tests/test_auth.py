@@ -7,7 +7,10 @@ from fastapi.testclient import TestClient
 
 from app import cli
 from app.config import DEV_SECRET_KEY, load_settings, normalize_database_url
+from app.db import create_tables, make_engine, make_sessionmaker
 from app.main import create_app
+from app.repositories import UserRepository
+from app.security import MAX_PASSWORD_BYTES, hash_password
 
 from .conftest import PASSWORD, add_user, make_settings
 
@@ -110,6 +113,25 @@ def test_login_rejects_bad_credentials(anonymous, database_url, username, passwo
     assert response.json()["detail"] == "Invalid username or password"
 
 
+def test_login_rejects_a_password_over_72_bytes(anonymous, database_url):
+    # bcrypt reads only the first 72 bytes, so a longer password must not match on its prefix.
+    password = "p" * MAX_PASSWORD_BYTES
+    engine = make_engine(database_url)
+    create_tables(engine)
+    with make_sessionmaker(engine)() as db:
+        UserRepository(db).create("scheduler.long", hash_password(password))
+    engine.dispose()
+
+    def attempt(candidate):
+        return anonymous.post("/api/auth/login", json={"username": "scheduler.long", "password": candidate})
+
+    assert attempt(password).status_code == 200
+    for candidate in (password + "x", "é" * 40):
+        response = attempt(candidate)
+        assert response.status_code == 401, response.text
+        assert response.json()["detail"] == "Invalid username or password"
+
+
 def test_passwords_are_stored_hashed(database_url):
     add_user(database_url, "scheduler.one")
     from sqlalchemy import text
@@ -157,6 +179,15 @@ def test_development_uses_a_default_secret_only_when_asked(monkeypatch):
     settings = load_settings()
     assert settings.secret_key == DEV_SECRET_KEY
     assert settings.database_url.startswith("sqlite:///")
+
+
+@pytest.mark.parametrize("ttl", ["0", "-5", "abc"])
+def test_invalid_token_ttl_is_refused(monkeypatch, ttl):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.setenv("TOKEN_TTL_MINUTES", ttl)
+    with pytest.raises(RuntimeError, match="TOKEN_TTL_MINUTES"):
+        load_settings()
 
 
 def test_frontend_url_accepts_several_origins(monkeypatch):

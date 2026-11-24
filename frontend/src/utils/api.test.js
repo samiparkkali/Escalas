@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { errorMessage, filenameFromDisposition, sessionCheckFailure } from './api';
+import { AxiosError } from 'axios';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import api, {
+  errorMessage,
+  filenameFromDisposition,
+  getToken,
+  onUnauthorized,
+  sessionCheckFailure,
+  setToken,
+} from './api';
 
 describe('errorMessage', () => {
   it('uses the backend detail string', () => {
@@ -38,5 +46,50 @@ describe('sessionCheckFailure', () => {
     expect(sessionCheckFailure({ response: { status: 401 } })).toBe('signed-out');
     expect(sessionCheckFailure({ response: { status: 503 } })).toBe('retry');
     expect(sessionCheckFailure({ request: {} })).toBe('retry');
+  });
+});
+
+describe('the 401 interceptor', () => {
+  const respondWith = (status) => async (config) => {
+    throw new AxiosError('Request failed', 'ERR_BAD_REQUEST', config, {}, {
+      status,
+      statusText: '',
+      data: {},
+      headers: {},
+      config,
+    });
+  };
+
+  let listener;
+  let unsubscribe;
+
+  beforeEach(() => {
+    const store = new Map();
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+    });
+    setToken('a-stored-token');
+    listener = vi.fn();
+    unsubscribe = onUnauthorized(listener);
+  });
+
+  afterEach(() => {
+    unsubscribe();
+    vi.unstubAllGlobals();
+  });
+
+  it('signs the user out when the server rejects the token', async () => {
+    await expect(api.get('/api/professionals', { adapter: respondWith(401) })).rejects.toThrow();
+    expect(getToken()).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the session on a failed login or another error', async () => {
+    await expect(api.post('/api/auth/login', {}, { adapter: respondWith(401) })).rejects.toThrow();
+    await expect(api.get('/api/professionals', { adapter: respondWith(503) })).rejects.toThrow();
+    expect(getToken()).toBe('a-stored-token');
+    expect(listener).not.toHaveBeenCalled();
   });
 });

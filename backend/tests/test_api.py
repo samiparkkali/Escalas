@@ -191,6 +191,29 @@ def test_data_survives_a_restart(database_url, client):
         assert restarted.get("/api/schedule/export").content == export
 
 
+def test_schedule_config_survives_a_restart(database_url, client):
+    roster(client)
+    # Counts differ from the defaults, so a fallback to the defaults is caught.
+    config = {
+        **CONFIG,
+        "is_24h": True,
+        "morning_weekday_specialist": 2,
+        "night_weekday_specialist": 0,
+        "morning_weekend_specialist": 3,
+        "night_weekend_specialist": 0,
+        "morning_weekday_intern": 0,
+        "night_weekday_intern": 3,
+        "morning_weekend_intern": 1,
+        "night_weekend_intern": 4,
+    }
+    assert client.post("/api/schedule/generate", json={"config": config}).status_code == 200
+
+    with TestClient(create_app(make_settings(database_url))) as restarted:
+        login(restarted, "scheduler.one")
+        saved = restarted.get("/api/schedule").json()["config"]
+        assert {key: saved[key] for key in config} == config
+
+
 def test_users_only_see_their_own_data(client, other_client):
     ids = roster(client)
     unavailability = client.post(
