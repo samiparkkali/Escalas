@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 
-from .conftest import login, make_settings
+from .conftest import add, login, make_settings
 
 CONFIG = {
     "start_date": "2026-12-07",
@@ -21,12 +21,6 @@ CONFIG = {
 }
 
 
-def add(client, name, role="specialist"):
-    response = client.post("/api/professionals", json={"name": name, "role": role})
-    assert response.status_code == 200, response.text
-    return response.json()["id"]
-
-
 def roster(client):
     return [
         add(client, "Dr. Test One"),
@@ -39,12 +33,8 @@ def roster(client):
 def test_professional_crud(client):
     pid = add(client, "  Dr. Test One  ")
     assert client.get("/api/professionals").json() == [
-        {"id": pid, "name": "Dr. Test One", "role": "specialist", "is_active": True}
+        {"id": pid, "name": "Dr. Test One", "role": "specialist"}
     ]
-    updated = client.put(
-        f"/api/professionals/{pid}", json={"name": "Dr. Test Uno", "role": "intern", "is_active": False}
-    )
-    assert updated.json() == {"id": pid, "name": "Dr. Test Uno", "role": "intern", "is_active": False}
     assert client.delete(f"/api/professionals/{pid}").status_code == 200
     assert client.get("/api/professionals").json() == []
     assert client.delete(f"/api/professionals/{pid}").status_code == 404
@@ -153,7 +143,7 @@ def test_csv_export_grid(client):
     assert rows[2:] == [["Dr. Zé Teste", "X", "", "X", ""], ["Dra. Íris Teste", "X", "", "X", ""]]
 
 
-def test_csv_neutralises_spreadsheet_formulas(client):
+def test_csv_neutralizes_spreadsheet_formulas(client):
     for name in ("=HYPERLINK(1)", "+Dr. Plus", "-Dr. Minus", "@Dr. At"):
         add(client, name)
     config = {**CONFIG, "end_date": "2026-12-07", "morning_weekday_specialist": 4}
@@ -191,6 +181,29 @@ def test_data_survives_a_restart(database_url, client):
         assert restarted.get("/api/schedule/export").content == export
 
 
+def test_schedule_config_survives_a_restart(database_url, client):
+    roster(client)
+    # Counts differ from the defaults, so a fallback to the defaults is caught.
+    config = {
+        **CONFIG,
+        "is_24h": True,
+        "morning_weekday_specialist": 2,
+        "night_weekday_specialist": 0,
+        "morning_weekend_specialist": 3,
+        "night_weekend_specialist": 0,
+        "morning_weekday_intern": 0,
+        "night_weekday_intern": 3,
+        "morning_weekend_intern": 1,
+        "night_weekend_intern": 4,
+    }
+    assert client.post("/api/schedule/generate", json={"config": config}).status_code == 200
+
+    with TestClient(create_app(make_settings(database_url))) as restarted:
+        login(restarted, "scheduler.one")
+        saved = restarted.get("/api/schedule").json()["config"]
+        assert {key: saved[key] for key in config} == config
+
+
 def test_users_only_see_their_own_data(client, other_client):
     ids = roster(client)
     unavailability = client.post(
@@ -204,10 +217,6 @@ def test_users_only_see_their_own_data(client, other_client):
     assert other_client.get("/api/schedule/export").status_code == 404
     assert other_client.get("/api/schedule/statistics").json()["professional_stats"] == []
 
-    assert (
-        other_client.put(f"/api/professionals/{ids[0]}", json={"name": "X", "role": "intern"}).status_code
-        == 404
-    )
     assert other_client.delete(f"/api/professionals/{ids[0]}").status_code == 404
     assert other_client.delete(f"/api/unavailabilities/{unavailability['id']}").status_code == 404
     assert (

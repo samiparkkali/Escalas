@@ -29,6 +29,17 @@ def database_url_from_env() -> str:
     return normalize_database_url(os.getenv("DATABASE_URL") or f"sqlite:///{DEFAULT_SQLITE_PATH}")
 
 
+def _token_ttl_minutes() -> int:
+    raw = os.getenv("TOKEN_TTL_MINUTES", "720")
+    try:
+        minutes = int(raw)
+    except ValueError:
+        minutes = 0
+    if minutes < 1:
+        raise RuntimeError(f"TOKEN_TTL_MINUTES must be a whole number of minutes, at least 1; got {raw!r}.")
+    return minutes
+
+
 def load_settings() -> Settings:
     app_env = os.getenv("APP_ENV", "production").strip().lower()
 
@@ -55,5 +66,5 @@ def load_settings() -> Settings:
         database_url=database_url,
         secret_key=secret_key,
         cors_origins=origins,
-        token_ttl_minutes=int(os.getenv("TOKEN_TTL_MINUTES", "720")),
+        token_ttl_minutes=_token_ttl_minutes(),
     )

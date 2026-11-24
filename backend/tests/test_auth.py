@@ -1,13 +1,17 @@
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from app import cli
 from app.config import DEV_SECRET_KEY, load_settings, normalize_database_url
+from app.db import create_tables, make_engine, make_sessionmaker
 from app.main import create_app
+from app.repositories import UserRepository
+from app.security import MAX_PASSWORD_BYTES, hash_password
 
 from .conftest import PASSWORD, add_user, make_settings
 
@@ -15,7 +19,6 @@ PROTECTED = [
     ("get", "/api/auth/me"),
     ("get", "/api/professionals"),
     ("post", "/api/professionals"),
-    ("put", "/api/professionals/x"),
     ("delete", "/api/professionals/x"),
     ("get", "/api/unavailabilities"),
     ("post", "/api/unavailabilities"),
@@ -35,7 +38,7 @@ def test_api_routes_require_a_token(anonymous, method, path):
 @pytest.mark.parametrize("method,path", PROTECTED)
 def test_api_routes_reject_a_forged_token(anonymous, method, path):
     forged = jwt.encode(
-        {"sub": "someone", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        {"sub": "someone", "exp": datetime.now(UTC) + timedelta(hours=1)},
         "a-different-secret-key-of-enough-length",
         algorithm="HS256",
     )
@@ -56,7 +59,7 @@ def _me(client, token):
 def test_expired_token_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
     secret = anonymous.app.state.settings.secret_key
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expired = jwt.encode({"sub": user_id, "exp": now - timedelta(minutes=1)}, secret, algorithm="HS256")
     current = jwt.encode({"sub": user_id, "exp": now + timedelta(minutes=1)}, secret, algorithm="HS256")
     assert _me(anonymous, expired).status_code == 401
@@ -66,14 +69,14 @@ def test_expired_token_is_rejected(anonymous, database_url):
 @pytest.mark.filterwarnings("ignore:The HMAC key")
 def test_token_signed_with_another_algorithm_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    payload = {"sub": user_id, "exp": datetime.now(UTC) + timedelta(minutes=5)}
     hs512 = jwt.encode(payload, anonymous.app.state.settings.secret_key, algorithm="HS512")
     assert _me(anonymous, hs512).status_code == 401
 
 
 def test_unsigned_token_is_rejected(anonymous, database_url):
     user_id = _login_user_id(anonymous, database_url)
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    payload = {"sub": user_id, "exp": datetime.now(UTC) + timedelta(minutes=5)}
     unsigned = jwt.encode(payload, None, algorithm="none")
     assert _me(anonymous, unsigned).status_code == 401
 
@@ -83,10 +86,6 @@ def test_token_of_a_deleted_user_is_rejected(anonymous, database_url):
     login = anonymous.post("/api/auth/login", json={"username": "scheduler.one", "password": PASSWORD})
     token = login.json()["access_token"]
     assert _me(anonymous, token).status_code == 200
-    from sqlalchemy import text
-
-    from app.db import make_engine
-
     engine = make_engine(database_url)
     with engine.begin() as conn:
         conn.execute(text("delete from users"))
@@ -94,11 +93,7 @@ def test_token_of_a_deleted_user_is_rejected(anonymous, database_url):
     assert _me(anonymous, token).status_code == 401
 
 
-def test_health_is_public(anonymous):
-    assert anonymous.get("/health").json() == {"status": "ok"}
-
-
-def test_login_returns_a_token_for_the_user(client):
+def test_logged_in_user_is_reported_by_me(client):
     assert client.get("/api/auth/me").json() == {"username": "scheduler.one"}
 
 
@@ -110,12 +105,27 @@ def test_login_rejects_bad_credentials(anonymous, database_url, username, passwo
     assert response.json()["detail"] == "Invalid username or password"
 
 
+def test_login_rejects_a_password_over_72_bytes(anonymous, database_url):
+    # bcrypt reads only the first 72 bytes, so a longer password must not match on its prefix.
+    password = "p" * MAX_PASSWORD_BYTES
+    engine = make_engine(database_url)
+    create_tables(engine)
+    with make_sessionmaker(engine)() as db:
+        UserRepository(db).create("scheduler.long", hash_password(password))
+    engine.dispose()
+
+    def attempt(candidate):
+        return anonymous.post("/api/auth/login", json={"username": "scheduler.long", "password": candidate})
+
+    assert attempt(password).status_code == 200
+    for candidate in (password + "x", "é" * 40):
+        response = attempt(candidate)
+        assert response.status_code == 401, response.text
+        assert response.json()["detail"] == "Invalid username or password"
+
+
 def test_passwords_are_stored_hashed(database_url):
     add_user(database_url, "scheduler.one")
-    from sqlalchemy import text
-
-    from app.db import make_engine
-
     with make_engine(database_url).connect() as conn:
         stored = conn.execute(text("select password_hash from users")).scalar_one()
     assert PASSWORD not in stored
@@ -157,6 +167,15 @@ def test_development_uses_a_default_secret_only_when_asked(monkeypatch):
     settings = load_settings()
     assert settings.secret_key == DEV_SECRET_KEY
     assert settings.database_url.startswith("sqlite:///")
+
+
+@pytest.mark.parametrize("ttl", ["0", "-5", "abc"])
+def test_invalid_token_ttl_is_refused(monkeypatch, ttl):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.setenv("TOKEN_TTL_MINUTES", ttl)
+    with pytest.raises(RuntimeError, match="TOKEN_TTL_MINUTES"):
+        load_settings()
 
 
 def test_frontend_url_accepts_several_origins(monkeypatch):

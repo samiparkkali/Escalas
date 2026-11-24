@@ -7,7 +7,7 @@ import ScheduleConfigTab from './components/ScheduleConfigTab';
 import ScheduleViewTab from './components/ScheduleViewTab';
 import StatisticsTab from './components/StatisticsTab';
 import api, { errorMessage, getToken, logout, onUnauthorized, sessionCheckFailure } from './utils/api';
-import { getNextMonthRange } from './utils/dateUtils';
+import { initialConfig, restoreConfig } from './utils/scheduleConfig';
 
 const TABS = [
   'Medical Professionals',
@@ -16,23 +16,6 @@ const TABS = [
   'Generate Schedule',
   'Statistics',
 ];
-
-const initialConfig = () => {
-  const { startDate, endDate } = getNextMonthRange();
-  return {
-    startDate,
-    endDate,
-    morningWeekdaySpecialist: 1,
-    nightWeekdaySpecialist: 1,
-    morningWeekendSpecialist: 1,
-    nightWeekendSpecialist: 1,
-
-    morningWeekdayIntern: 2,
-    nightWeekdayIntern: 2,
-    morningWeekendIntern: 2,
-    nightWeekendIntern: 2,
-  };
-};
 
 function App() {
   // undefined while the stored token is being checked, null when signed out.
@@ -83,13 +66,7 @@ function App() {
       setUnavailabilities(unavs.data);
       const latest = await api.get('/api/schedule');
       setSchedule(latest.data);
-      if (latest.data) {
-        setScheduleConfig((prev) => ({
-          ...prev,
-          startDate: latest.data.start_date,
-          endDate: latest.data.end_date,
-        }));
-      }
+      setScheduleConfig((prev) => restoreConfig(prev, latest.data));
     } catch (err) {
       setLoadError(errorMessage(err, 'Failed to load your data'));
     } finally {
@@ -122,7 +99,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>HBA — Shift Scheduler</h1>
+        <h1>Escalas — Shift Scheduler</h1>
         <div className="user-bar">
           <span>Signed in as <strong>{user}</strong></span>
           <button className="btn-link" onClick={signOut}>Log out</button>

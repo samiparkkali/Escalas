@@ -94,26 +94,6 @@ def test_unfillable_shifts_are_reported_with_missing_counts():
     ]
 
 
-def test_inactive_professionals_are_not_passed_to_the_generator_by_the_api(client):
-    pid = client.post("/api/professionals", json={"name": "Dr. Test Away", "role": "specialist"}).json()["id"]
-    client.put(
-        f"/api/professionals/{pid}", json={"name": "Dr. Test Away", "role": "specialist", "is_active": False}
-    )
-    result = client.post(
-        "/api/schedule/generate",
-        json={
-            "config": {
-                "start_date": "2026-12-07",
-                "end_date": "2026-12-07",
-                **ZERO,
-                "morning_weekday_specialist": 1,
-            }
-        },
-    ).json()
-    assert result["assignments"] == []
-    assert result["unassigned_shifts"][0]["required_specialists"] == 1
-
-
 def test_load_is_spread_evenly():
     cfg = config(
         start="2026-12-01",
@@ -161,7 +141,7 @@ def test_24h_mode_staffs_by_the_larger_requirement():
     assert result.unassigned_shifts == []
 
 
-def test_csv_neutralises_tab_and_carriage_return_prefixes():
+def test_csv_neutralizes_tab_and_carriage_return_prefixes():
     assignments = [
         AssignmentResponse(
             professional_id=str(i),

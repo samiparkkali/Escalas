@@ -5,7 +5,6 @@ Rules enforced by the generator:
   separate values for weekday and weekend mornings and nights.
 - A professional is never assigned twice to the same shift and is never
   assigned to a shift they marked as unavailable.
-- Only active professionals are scheduled.
 - Rest: after a night shift a professional is not scheduled for the next two
   shifts (the next morning and the next night).
 - 24h mode: the same people cover the morning and the night of a day, the
@@ -18,10 +17,10 @@ Rules enforced by the generator:
 """
 
 import csv
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from io import StringIO
-from typing import Dict, Iterable, List, Set, Tuple
 
 from .schemas import (
     AssignmentResponse,
@@ -47,10 +46,13 @@ class Candidate:
 class Shift:
     date: date
     shift_type: ShiftType
-    is_weekend: bool
     weekday_num: int
     required_specialists: int
     required_interns: int
+
+    @property
+    def is_weekend(self) -> bool:
+        return self.weekday_num >= SATURDAY
 
     def required(self, role: Role) -> int:
         return self.required_specialists if role == Role.specialist else self.required_interns
@@ -68,15 +70,15 @@ class ProfessionalLoad:
     sunday: int = 0
     blocked_until_index: int = 0
 
-    def sort_key(self, shift_type: ShiftType, is_weekend: bool, weekday_num: int):
+    def sort_key(self, shift: Shift):
         specific_day_load = 0
-        if weekday_num == SATURDAY:
+        if shift.weekday_num == SATURDAY:
             specific_day_load = self.saturday
-        elif weekday_num == SUNDAY:
+        elif shift.weekday_num == SUNDAY:
             specific_day_load = self.sunday
 
-        shift_count = self.morning if shift_type == ShiftType.morning else self.night
-        day_count = self.weekend if is_weekend else self.weekday
+        shift_count = self.morning if shift.shift_type == ShiftType.morning else self.night
+        day_count = self.weekend if shift.is_weekend else self.weekday
         return (self.total, day_count, specific_day_load, shift_count, self.professional.name)
 
     def record(self, shift: Shift) -> None:
@@ -97,23 +99,22 @@ class ProfessionalLoad:
 
 @dataclass
 class GeneratedSchedule:
-    assignments: List[AssignmentResponse]
-    unassigned_shifts: List[UnassignedShiftResponse]
+    assignments: list[AssignmentResponse]
+    unassigned_shifts: list[UnassignedShiftResponse]
 
 
-def build_shifts(config: ScheduleConfigModel) -> List[Shift]:
-    shifts: List[Shift] = []
+def build_shifts(config: ScheduleConfigModel) -> list[Shift]:
+    shifts: list[Shift] = []
     current = config.start_date
     while current <= config.end_date:
         weekday_num = current.weekday()
-        is_weekend = weekday_num >= SATURDAY
+        day_kind = "weekend" if weekday_num >= SATURDAY else "weekday"
         for shift_type in (ShiftType.morning, ShiftType.night):
-            prefix = f"{shift_type.value}_{'weekend' if is_weekend else 'weekday'}"
+            prefix = f"{shift_type.value}_{day_kind}"
             shifts.append(
                 Shift(
                     date=current,
                     shift_type=shift_type,
-                    is_weekend=is_weekend,
                     weekday_num=weekday_num,
                     required_specialists=getattr(config, f"{prefix}_specialist"),
                     required_interns=getattr(config, f"{prefix}_intern"),
@@ -126,13 +127,13 @@ def build_shifts(config: ScheduleConfigModel) -> List[Shift]:
 def generate_schedule(
     config: ScheduleConfigModel,
     professionals: Iterable[Candidate],
-    unavailable: Set[Tuple[str, date, ShiftType]],
+    unavailable: set[tuple[str, date, ShiftType]],
 ) -> GeneratedSchedule:
     shifts = build_shifts(config)
-    loads: Dict[str, ProfessionalLoad] = {p.id: ProfessionalLoad(professional=p) for p in professionals}
+    loads: dict[str, ProfessionalLoad] = {p.id: ProfessionalLoad(professional=p) for p in professionals}
 
-    assignments: List[AssignmentResponse] = []
-    unassigned: List[UnassignedShiftResponse] = []
+    assignments: list[AssignmentResponse] = []
+    unassigned: list[UnassignedShiftResponse] = []
 
     step = 2 if config.is_24h else 1
     for idx in range(0, len(shifts), step):
@@ -158,12 +159,12 @@ def generate_schedule(
 
 
 def _assign_role(
-    group: List[Shift],
+    group: list[Shift],
     start_idx: int,
     role: Role,
-    loads: Dict[str, ProfessionalLoad],
-    unavailable: Set[Tuple[str, date, ShiftType]],
-    assignments: List[AssignmentResponse],
+    loads: dict[str, ProfessionalLoad],
+    unavailable: set[tuple[str, date, ShiftType]],
+    assignments: list[AssignmentResponse],
 ) -> int:
     required = max(shift.required(role) for shift in group)
     if required == 0:
@@ -176,8 +177,7 @@ def _assign_role(
         and load.blocked_until_index <= start_idx
         and not any((load.professional.id, s.date, s.shift_type) in unavailable for s in group)
     ]
-    lead = group[0]
-    candidates.sort(key=lambda load: load.sort_key(lead.shift_type, lead.is_weekend, lead.weekday_num))
+    candidates.sort(key=lambda load: load.sort_key(group[0]))
 
     chosen = candidates[:required]
     for load in chosen:
@@ -198,8 +198,8 @@ def _assign_role(
     return len(chosen)
 
 
-def compute_statistics(assignments: Iterable[AssignmentResponse]) -> List[StatisticsResponse]:
-    stats: Dict[str, StatisticsResponse] = {}
+def compute_statistics(assignments: Iterable[AssignmentResponse]) -> list[StatisticsResponse]:
+    stats: dict[str, StatisticsResponse] = {}
     for a in assignments:
         record = stats.get(a.professional_id)
         if record is None:
@@ -222,12 +222,12 @@ def compute_statistics(assignments: Iterable[AssignmentResponse]) -> List[Statis
         else:
             record.weekday += 1
         record.total += 1
-    return sorted(stats.values(), key=_roster_order)
+    return sorted(stats.values(), key=lambda s: _roster_key(s.role, s.name))
 
 
-def _roster_order(item) -> tuple:
+def _roster_key(role: Role, name: str) -> tuple:
     # Specialists first, then interns; alphabetical within each role.
-    return (0 if item.role == Role.specialist else 1, item.name.casefold())
+    return (0 if role == Role.specialist else 1, name.casefold())
 
 
 FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
@@ -238,7 +238,7 @@ def _safe_cell(value: str) -> str:
     return f"'{value}" if value.startswith(FORMULA_PREFIXES) else value
 
 
-def export_csv(start_date: date, end_date: date, assignments: List[AssignmentResponse]) -> str:
+def export_csv(start_date: date, end_date: date, assignments: list[AssignmentResponse]) -> str:
     """Semicolon-separated grid: one row per professional, a Morning and a Night
     column per day of the period, "X" where the professional works."""
     days = [start_date + timedelta(days=n) for n in range((end_date - start_date).days + 1)]
@@ -251,8 +251,8 @@ def export_csv(start_date: date, end_date: date, assignments: List[AssignmentRes
         # Padding widens the columns so Excel does not show the dates as "####".
         header_shifts.extend(["   Morning   ", "   Night   "])
 
-    worked: Dict[str, Set[Tuple[date, ShiftType]]] = {}
-    people: Dict[str, AssignmentResponse] = {}
+    worked: dict[str, set[tuple[date, ShiftType]]] = {}
+    people: dict[str, AssignmentResponse] = {}
     for a in assignments:
         worked.setdefault(a.professional_id, set()).add((a.shift_date, a.shift_type))
         people.setdefault(a.professional_id, a)
@@ -261,10 +261,7 @@ def export_csv(start_date: date, end_date: date, assignments: List[AssignmentRes
     writer = csv.writer(output, delimiter=";")
     writer.writerow(header_dates)
     writer.writerow(header_shifts)
-    ordered = sorted(
-        people.values(),
-        key=lambda a: (0 if a.professional_role == Role.specialist else 1, a.professional_name.casefold()),
-    )
+    ordered = sorted(people.values(), key=lambda a: _roster_key(a.professional_role, a.professional_name))
     for person in ordered:
         slots = worked[person.professional_id]
         row = [_safe_cell(person.professional_name)]

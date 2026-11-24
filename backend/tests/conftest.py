@@ -1,7 +1,8 @@
 import os
 
+TEST_SECRET_KEY = "test-secret-key-that-is-long-enough-123"
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-123")
+os.environ.setdefault("SECRET_KEY", TEST_SECRET_KEY)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -19,7 +20,7 @@ def make_settings(database_url: str) -> Settings:
     return Settings(
         app_env="test",
         database_url=database_url,
-        secret_key="test-secret-key-that-is-long-enough-123",
+        secret_key=TEST_SECRET_KEY,
         cors_origins=("http://localhost:5173",),
         token_ttl_minutes=60,
     )
@@ -31,6 +32,12 @@ def add_user(database_url: str, username: str) -> None:
     with make_sessionmaker(engine)() as db:
         UserRepository(db).create(username, hash_password(PASSWORD))
     engine.dispose()
+
+
+def add(client: TestClient, name: str, role: str = "specialist") -> str:
+    response = client.post("/api/professionals", json={"name": name, "role": role})
+    assert response.status_code == 200, response.text
+    return response.json()["id"]
 
 
 def login(client: TestClient, username: str) -> None:

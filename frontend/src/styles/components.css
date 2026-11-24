@@ -155,8 +155,7 @@
   background-color: var(--secondary-orange);
   color: white;
   border: none;
-  /* Default padding for secondary buttons, can be overridden */
-  padding: 6px 14px; 
+  padding: 6px 14px;
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
@@ -203,7 +202,7 @@
 /* ========== HEADINGS (Component specific) ========== */
 h4 {
   font-size: 18px;
-  margin-top: 24px; /* Default margin for h4 within components */
+  margin-top: 24px;
   color: var(--text-primary);
 }
 
