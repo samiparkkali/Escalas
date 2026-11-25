@@ -23,7 +23,8 @@ before the first schema change. Without `DATABASE_URL` data is stored in
 
 ## Frontend
 
-Requires Node 20.19+ (tested with 26).
+`npm run dev` and `npm run build` need Node 20.19+ or 22.12+ (Vite 7).
+`npm test` needs Node 22.22+ or 24.15+ (jsdom 31). Tested with 26.
 
 ```bash
 cd frontend
