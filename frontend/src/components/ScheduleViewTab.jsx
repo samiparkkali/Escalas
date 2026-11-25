@@ -6,8 +6,10 @@ import UnassignedShiftsTable from './UnassignedShiftsTable';
 const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const missingDates = !config.start_date || !config.end_date;
 
   const handleGenerateSchedule = async (is24hMode) => {
+    if (missingDates) return;
     setLoading(true);
     setError('');
 
@@ -39,11 +41,11 @@ const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
       </div>
 
       <div className="button-row">
-        <button className="btn-secondary" onClick={() => handleGenerateSchedule(false)} disabled={loading}>
+        <button className="btn-secondary" onClick={() => handleGenerateSchedule(false)} disabled={loading || missingDates}>
           {loading ? 'Generating…' : 'Generate Standard Schedule'}
         </button>
 
-        <button className="btn-secondary" onClick={() => handleGenerateSchedule(true)} disabled={loading}>
+        <button className="btn-secondary" onClick={() => handleGenerateSchedule(true)} disabled={loading || missingDates}>
           {loading ? 'Generating…' : 'Generate Schedule - 24h Format'}
         </button>
 
@@ -53,6 +55,10 @@ const ScheduleViewTab = ({ config, schedule, setSchedule }) => {
           </button>
         )}
       </div>
+
+      {missingDates && (
+        <div className="alert warning">Set the start and end dates in Schedule Config to generate a schedule.</div>
+      )}
 
       {error && <div className="alert error" role="alert">{error}</div>}
 

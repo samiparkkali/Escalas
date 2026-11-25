@@ -105,9 +105,17 @@ def test_login_rejects_bad_credentials(anonymous, database_url, username, passwo
     assert response.json()["detail"] == "Invalid username or password"
 
 
-def test_login_rejects_a_password_over_72_bytes(anonymous, database_url):
+# Each longer password starts with the stored one's 72 bytes; the multibyte pair is under 72 characters,
+# so only a check on bytes, not characters, rejects it.
+@pytest.mark.parametrize(
+    "password,longer",
+    [("p" * MAX_PASSWORD_BYTES, "p" * MAX_PASSWORD_BYTES + "x"), ("é" * 36, "é" * 37)],
+    ids=["ascii", "multibyte"],
+)
+def test_login_rejects_a_password_over_72_bytes(anonymous, database_url, password, longer):
     # bcrypt reads only the first 72 bytes, so a longer password must not match on its prefix.
-    password = "p" * MAX_PASSWORD_BYTES
+    assert len(password.encode("utf-8")) == MAX_PASSWORD_BYTES
+    assert longer.encode("utf-8")[:MAX_PASSWORD_BYTES] == password.encode("utf-8")
     engine = make_engine(database_url)
     create_tables(engine)
     with make_sessionmaker(engine)() as db:
@@ -118,10 +126,9 @@ def test_login_rejects_a_password_over_72_bytes(anonymous, database_url):
         return anonymous.post("/api/auth/login", json={"username": "scheduler.long", "password": candidate})
 
     assert attempt(password).status_code == 200
-    for candidate in (password + "x", "é" * 40):
-        response = attempt(candidate)
-        assert response.status_code == 401, response.text
-        assert response.json()["detail"] == "Invalid username or password"
+    response = attempt(longer)
+    assert response.status_code == 401, response.text
+    assert response.json()["detail"] == "Invalid username or password"
 
 
 def test_passwords_are_stored_hashed(database_url):

@@ -1,6 +1,6 @@
 from datetime import date
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -110,7 +110,8 @@ class ScheduleResponse(BaseModel):
     start_date: date
     end_date: date
     is_24h: bool
-    config: ScheduleConfigModel
+    # The config as stored, not re-validated, so a schedule saved under older rules still loads.
+    config: dict[str, Any]
     assignments: list[AssignmentResponse]
     unassigned_shifts: list[UnassignedShiftResponse]
     success: bool
