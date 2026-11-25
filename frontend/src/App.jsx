@@ -35,6 +35,7 @@ function App() {
     setProfessionals([]);
     setUnavailabilities([]);
     setSchedule(null);
+    setScheduleConfig(initialConfig());
     setActiveTab(0);
   }, []);
 

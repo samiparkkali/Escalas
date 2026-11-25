@@ -2,6 +2,14 @@
 
 import csv
 import io
+from datetime import date
+
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+
+from app.db import make_engine, make_sessionmaker
+from app.orm import Schedule
+from app.schemas import MAX_PERIOD_DAYS
 
 from .conftest import add
 
@@ -83,3 +91,23 @@ def test_generate_rejects_an_end_date_before_the_start_date(client):
     add(client, "Dr. Test One")
     response = generate(client, start_date="2026-12-05", end_date="2026-12-01")
     assert response.status_code == 422
+
+
+def test_a_stored_config_that_no_longer_validates_still_loads(database_url, client):
+    add(client, "Dr. Test One")
+    assert generate(client).status_code == 200
+    # A config saved under older rules: a period longer than today's limit, written straight to the database.
+    engine = make_engine(database_url)
+    with make_sessionmaker(engine)() as db:
+        schedule = db.scalar(select(Schedule))
+        schedule.config = {**schedule.config, "start_date": "2026-01-01", "end_date": "2027-12-31"}
+        db.commit()
+    engine.dispose()
+    assert (date(2027, 12, 31) - date(2026, 1, 1)).days + 1 > MAX_PERIOD_DAYS
+
+    # Reports the 500 a browser would get rather than re-raising the server error.
+    browser = TestClient(client.app, raise_server_exceptions=False, headers=client.headers)
+    response = browser.get("/api/schedule")
+    assert response.status_code == 200, response.text
+    assert response.json()["start_date"] == CONFIG["start_date"]
+    assert response.json()["config"]["end_date"] == "2027-12-31"
