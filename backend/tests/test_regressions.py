@@ -110,3 +110,4 @@ def test_a_stored_config_that_no_longer_validates_still_loads(database_url, clie
     response = browser.get("/api/schedule")
     assert response.status_code == 200, response.text
     assert response.json()["start_date"] == CONFIG["start_date"]
+    assert response.json()["config"]["end_date"] == "2027-12-31"
